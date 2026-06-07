@@ -1,0 +1,47 @@
+.how { background: var(--gray-100); }
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+
+.step {
+  background: var(--white);
+  border-radius: 20px;
+  padding: 36px 32px;
+  border: 1px solid var(--gray-300);
+  position: relative;
+  transition: box-shadow .25s, transform .25s;
+}
+.step:hover { box-shadow: 0 16px 48px rgba(0,0,0,.1); transform: translateY(-4px); }
+
+.step-number {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--gray-100);
+  line-height: 1;
+  user-select: none;
+}
+
+.step-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--orange-l);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.step-icon svg { width: 28px; height: 28px; fill: var(--orange); }
+
+.step h3 { font-size: 1.25rem; font-weight: 800; color: var(--dark); margin-bottom: 12px; }
+.step p { font-size: 0.9rem; color: var(--gray-500); line-height: 1.7; }
+
+@media (max-width: 768px) {
+  .steps { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,113 @@
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--black);
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.nav-inner {
+  width: 100%;
+  padding: 0 40px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 32px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--orange);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-icon svg { width: 22px; height: 22px; fill: var(--white); }
+
+.logo-text {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.5px;
+}
+.logo-text span { color: var(--orange); }
+
+nav { display: flex; align-items: center; gap: 6px; }
+
+nav a {
+  padding: 8px 14px;
+  font-size: 0.875rem;
+  font-weight: 400;
+  color: #d1d5db;
+  border-radius: 6px;
+  transition: color .2s, background .2s;
+  white-space: nowrap;
+}
+nav a:hover { color: var(--white); background: #1e1e1e; }
+
+.btn-nav {
+  padding: 9px 20px;
+  background: var(--white);
+  color: #0d0d0d !important;
+  border-radius: 100px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+}
+.btn-nav:hover {
+  background: var(--gold) !important;
+  color: var(--white) !important;
+}
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 6px;
+  background: none;
+  border: none;
+}
+.hamburger span {
+  width: 24px;
+  height: 2px;
+  background: var(--white);
+  border-radius: 2px;
+  transition: .3s;
+  display: block;
+}
+
+.mobile-nav {
+  display: none;
+  flex-direction: column;
+  background: var(--black);
+  border-top: 1px solid #1e1e1e;
+  padding: 12px 24px 20px;
+}
+.mobile-nav.open { display: flex; }
+.mobile-nav a {
+  padding: 10px 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #d1d5db;
+  border-bottom: 1px solid #1e1e1e;
+}
+.mobile-nav a:last-child { border-bottom: none; }
+.mobile-nav a:hover { color: var(--orange); }
+
+@media (max-width: 768px) {
+  nav { display: none; }
+  .hamburger { display: flex; }
+}

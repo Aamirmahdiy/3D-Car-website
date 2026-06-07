@@ -1,0 +1,50 @@
+.car-scene-wrapper {
+  height: 300vh;
+  position: relative;
+  margin-top: -18vh;   /* pulls the band up so ~half the car peeks above the fold */
+  z-index: 0;
+}
+
+.car-scene-sticky {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.car-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+}
+
+/* Black band across the top, its lower edge tilting down toward the left.
+   The car (in the canvas below) hangs upside-down beneath it. */
+.car-scene-band {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  /* Boundary: 16% on the right edge → 40% on the left edge */
+  clip-path: polygon(0 0, 100% 0, 100% 16%, 0 40%);
+  background: linear-gradient(
+    to bottom,
+    #050505 0%,
+    #0b0b0b 55%,
+    rgba(15, 15, 15, 0.35) 100%
+  );
+}
+
+@media (max-width: 768px) {
+  .car-scene-wrapper {
+    height: 300vh;
+  }
+  /* Steeper, higher band so the car has room on narrow screens */
+  .car-scene-band {
+    clip-path: polygon(0 0, 100% 0, 100% 12%, 0 30%);
+  }
+}

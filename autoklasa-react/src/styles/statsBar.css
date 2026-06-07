@@ -1,0 +1,27 @@
+.stats-bar {
+  background: #161616;
+  border-top: 1px solid #1e1e1e;
+  border-bottom: 1px solid #1e1e1e;
+  padding: 22px 24px;
+}
+
+.stats-bar-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-around;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stat-item { text-align: center; }
+
+.stat-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--white);
+  line-height: 1;
+}
+.stat-number span { color: var(--orange); }
+
+.stat-desc { font-size: 0.78rem; color: #6b7280; margin-top: 4px; }

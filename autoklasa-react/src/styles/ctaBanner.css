@@ -1,0 +1,27 @@
+.cta-banner {
+  background: var(--black);
+  padding: 80px 24px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(232,93,4,.18) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta-inner {
+  max-width: 700px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+.cta-inner .section-label { justify-content: center; }
+.cta-inner .section-title { color: var(--white); margin-bottom: 16px; }
+.cta-inner p { color: #9ca3af; font-size: 1rem; margin-bottom: 36px; line-height: 1.7; }
+
+.cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
