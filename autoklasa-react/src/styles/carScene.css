@@ -1,14 +1,13 @@
 .car-scene-wrapper {
-  height: 300vh;
+  height: 100vh;
   position: relative;
-  margin-top: -18vh;   /* pulls the band up so ~half the car peeks above the fold */
+  margin-top: -18vh;
   z-index: 0;
 }
 
 .car-scene-sticky {
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  position: relative;
+  height: 100%;
   width: 100%;
   overflow: hidden;
   background: #ffffff;

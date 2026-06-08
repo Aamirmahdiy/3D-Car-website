@@ -1,4 +1,4 @@
-import { Suspense, useRef, useEffect, useState } from 'react';
+import { Suspense, useRef, useEffect, useState, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { useGLTF, Environment } from '@react-three/drei';
 import { gsap } from 'gsap';
@@ -26,18 +26,18 @@ const BAND_RIGHT_M = 0.12, BAND_LEFT_M = 0.30;
 
 function PorscheModel({ animRef }) {
   const { scene } = useGLTF('/porsche911.glb');
+  const clonedScene = useMemo(() => scene.clone(true), [scene]);
   const groupRef = useRef();
   const [geom, setGeom] = useState(null);
-
   useEffect(() => {
-    if (!scene) return;
+    if (!clonedScene) return;
 
     const isMobile = window.innerWidth < 768;
     const bandTop = isMobile ? BAND_RIGHT_M : BAND_RIGHT;
     const bandLeft = isMobile ? BAND_LEFT_M : BAND_LEFT;
 
     // Measure the model in its native orientation
-    const box = new THREE.Box3().setFromObject(scene);
+    const box = new THREE.Box3().setFromObject(clonedScene);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
@@ -78,6 +78,7 @@ function PorscheModel({ animRef }) {
       bandTop,
       bandLeft,
     });
+
   }, [scene]);
 
   useFrame(() => {
@@ -103,7 +104,7 @@ function PorscheModel({ animRef }) {
       <group rotation={[Math.PI, 0, 0]}>
         {/* Orient to side profile + scale about the model's centre */}
         <group rotation={[0, geom.sideRotY, 0]} scale={geom.scale}>
-          <primitive object={scene} position={geom.center} />
+          <primitive object={clonedScene} position={geom.center} />
         </group>
       </group>
     </group>
@@ -116,27 +117,51 @@ export default function CarScene() {
   const wrapperRef = useRef();
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // Shared state tweened by GSAP, read by useFrame — no React re-renders.
+  // Shared animation state — tweened by GSAP, read by useFrame every frame.
   const animRef = useRef({ carX: TRAVEL });
 
   useEffect(() => {
-    if (!wrapperRef.current) return;
     const anim = animRef.current;
+    anim.carX = TRAVEL;
 
+    const SCROLL_RANGE = window.innerHeight * 1.4;
+
+    // Entrance: car sweeps right → centre on page load (before any scroll)
+    let entrance = gsap.to(anim, {
+      carX: 0,
+      duration: 1.4,
+      ease: 'power3.out',
+      delay: 0.3,
+    });
+
+    // Scroll: drive carX 0 → -TRAVEL with smooth scrub (mirrors WhySection approach)
     const ctx = gsap.context(() => {
-      gsap.to(anim, {
-        carX: -TRAVEL, // right → left, following the line down
-        ease: 'none',
-        scrollTrigger: {
-          trigger: wrapperRef.current,
-          start: 'top top',
-          end: 'bottom bottom',
-          scrub: true,
-        },
-      });
-    }, wrapperRef);
+      gsap.fromTo(anim,
+        { carX: 0 },
+        {
+          carX: -TRAVEL,
+          ease: 'none',
+          immediateRender: false,
+          scrollTrigger: {
+            trigger: document.documentElement,
+            start: 'top top',
+            end: `+=${SCROLL_RANGE}`,
+            scrub: 1,
+            onUpdate: (self) => {
+              if (entrance && self.progress > 0) {
+                entrance.kill();
+                entrance = null;
+              }
+            },
+          },
+        }
+      );
+    });
 
-    return () => ctx.revert();
+    return () => {
+      entrance?.kill();
+      ctx.revert();
+    };
   }, []);
 
   return (

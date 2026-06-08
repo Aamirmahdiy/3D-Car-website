@@ -1,16 +1,24 @@
 .stats-bar {
-  background: #161616;
-  border-top: 1px solid #1e1e1e;
-  border-bottom: 1px solid #1e1e1e;
-  padding: 22px 24px;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 22px 40px;
 }
 
 .stats-bar-inner {
   max-width: 1200px;
   margin: 0 auto;
   display: flex;
-  justify-content: space-around;
+  align-items: center;
+  justify-content: space-between;
   gap: 20px;
+  flex-wrap: wrap;
+}
+
+.stats-items {
+  display: flex;
+  align-items: center;
+  gap: 40px;
   flex-wrap: wrap;
 }
 
@@ -19,9 +27,44 @@
 .stat-number {
   font-size: 1.6rem;
   font-weight: 800;
-  color: var(--white);
+  color: #111827;
   line-height: 1;
 }
-.stat-number span { color: var(--orange); }
+.stat-number span { color: #111827; }
 
-.stat-desc { font-size: 0.78rem; color: #6b7280; margin-top: 4px; }
+.stat-number--gold,
+.stat-number--gold span {
+  color: #c99e4d;
+}
+
+.stat-desc {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+/* "Read the reviews" pill button */
+.btn-reviews {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 13px 28px;
+  background: #b0b0b0;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 100px;
+  white-space: nowrap;
+  transition: background .2s, transform .15s;
+  flex-shrink: 0;
+}
+.btn-reviews:hover {
+  background: #c99e4d;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .stats-bar { padding: 20px 24px; }
+  .stats-items { gap: 24px; justify-content: center; }
+  .stats-bar-inner { justify-content: center; }
+}

@@ -2,9 +2,9 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import CarScene from './components/CarScene';
 import StatsBar from './components/StatsBar';
-import HowItWorks from './components/HowItWorks';
 import ProofTicker from './components/ProofTicker';
 import Categories from './components/Categories';
+import WhySection from './components/WhySection';
 import Benefits from './components/Benefits';
 import Reviews from './components/Reviews';
 import Faq from './components/Faq';
@@ -19,10 +19,19 @@ export default function App() {
       <Hero />
       <CarScene />
       <StatsBar />
-      <HowItWorks />
-      <ProofTicker />
       <Categories />
-      <Benefits />
+      <WhySection />
+      <div style={{ background: '#000', height: '30vh' }} />
+      <div style={{ background: '#000', overflow: 'hidden' }}>
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+          <ProofTicker />
+        </div>
+      </div>
+      <div style={{ background: '#000', overflow: 'hidden' }}>
+        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+          <Benefits />
+        </div>
+      </div>
       <Reviews />
       <Faq />
       <CtaBanner />
