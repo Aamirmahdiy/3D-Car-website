@@ -9,17 +9,22 @@ import '../styles/whySection.css';
 gsap.registerPlugin(ScrollTrigger);
 
 /* ── Tunables ─────────────────────────────────────────── */
-const FOV_WHY   = 45;
-const CAM_Y     = 14;
-const CAM_Z     = 5;
-const COVERAGE  = 0.70;
-// clip-path diagonal: (0%,88%) → (100%,2%) — height drop = 86% per 100% width
-const DIAG_DROP = 0.86;
+const FOV_WHY      = 45;
+const CAM_Y        = 14;
+const CAM_Z        = 5;
+const COVERAGE     = 0.50;
+// clip-path diagonal: (0%,94%) → (100%,8%) — height drop = 86% per 100% width
+const DIAG_DROP    = 0.86;
+// total extra px the canvas has vs 0.7*vh: 160px above section + 80px section padding
+const CANVAS_EXTRA = 240;
+// world-Z offset shifting the car down to match the lowered diagonal position
+const Z_DROP       = 2.0;
 
 // zScale: Z-per-unit-X so the car's screen trajectory is parallel to the CSS diagonal.
 // Solved from: dCSS_y/dCSS_x = (CAM_Y/camMag) * zScale * canvasAspect = -DIAG_DROP
 function computeZScale() {
-  const canvasAspect = window.innerWidth / (0.7 * window.innerHeight);
+  const canvasH      = 0.7 * window.innerHeight + CANVAS_EXTRA;
+  const canvasAspect = window.innerWidth / canvasH;
   const camMag       = Math.sqrt(CAM_Y ** 2 + CAM_Z ** 2);
   return -DIAG_DROP / ((CAM_Y / camMag) * canvasAspect);
 }
@@ -27,7 +32,8 @@ function computeZScale() {
 // Travel distance: world X where the car centre sits exactly at the canvas right edge (NDC_x = 1).
 // Solved from: x / (d(x) * canvasAspect * tan(vFov/2)) = 1, where d(x) = camMag − (CAM_Z/camMag)*zScale*x
 function computeTravel(zScale) {
-  const canvasAspect = window.innerWidth / (0.7 * window.innerHeight);
+  const canvasH      = 0.7 * window.innerHeight + CANVAS_EXTRA;
+  const canvasAspect = window.innerWidth / canvasH;
   const camMag       = Math.sqrt(CAM_Y ** 2 + CAM_Z ** 2);
   const A            = canvasAspect * Math.tan(((FOV_WHY * Math.PI) / 180) / 2);
   return (camMag * A) / (1 + (CAM_Z / camMag) * zScale * A);
@@ -70,7 +76,7 @@ function TopCarModel({ animRef }) {
     if (!groupRef.current || !geom) return;
     const x      = animRef.current.carX;
     const zScale = animRef.current.zScale;
-    groupRef.current.position.set(x, 0, zScale * x);
+    groupRef.current.position.set(x, 0, zScale * x + Z_DROP);
   });
 
   if (!geom) return null;
@@ -108,7 +114,7 @@ export default function WhySection() {
         immediateRender: false,
         scrollTrigger: {
           trigger: sectionRef.current,
-          start: 'top 85%',
+          start: 'top 57%',
           end:   'center center',
           scrub: 1,
         },
@@ -148,16 +154,24 @@ export default function WhySection() {
         <div><span className="why-gold">worth it?</span></div>
       </div>
 
-      {/* 4 — feature card in the lower-right black area */}
-      <div className="why-feature">
+      {/* 4 — saving time — lower-right */}
+      <div className="why-feature why-feature--right">
         <div className="why-feature-icon">
           <svg viewBox="0 0 24 24">
             <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/>
           </svg>
         </div>
-        <div className="why-feature-text">
+        <div>
           <div className="why-feature-title">Saving time</div>
           <div className="why-feature-desc">Don't waste time browsing questionable offers – we will find the best offers for you and take care of all the formalities.</div>
+        </div>
+      </div>
+
+      {/* 5 — security — lower-left */}
+      <div className="why-feature why-feature--left">
+        <div>
+          <div className="why-feature-title">Security</div>
+          <div className="why-feature-desc">We only buy cars whose mileage can be confirmed by documents from the authorized service center.</div>
         </div>
       </div>
     </section>

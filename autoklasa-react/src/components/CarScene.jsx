@@ -24,13 +24,43 @@ const LINE_OFFSET = 0;        // extra vertical nudge in world units
 const BAND_RIGHT = 0.16, BAND_LEFT = 0.40;
 const BAND_RIGHT_M = 0.12, BAND_LEFT_M = 0.30;
 
-function PorscheModel({ animRef }) {
-  const { scene } = useGLTF('/porsche911.glb');
+function MercedesModel({ animRef }) {
+  const { scene } = useGLTF('/mercedes-_benz_w206_c220.glb');
   const clonedScene = useMemo(() => scene.clone(true), [scene]);
   const groupRef = useRef();
   const [geom, setGeom] = useState(null);
+
+  // Wheel rolling state
+  const wheelsRef   = useRef([]);
+  const wheelRadius = useRef(1);   // model-space radius, set once geometry loads
+  const prevCarX    = useRef(null);
+
   useEffect(() => {
     if (!clonedScene) return;
+
+    // ── find wheel meshes ──────────────────────────────────────────────────
+    const found = [];
+    clonedScene.traverse(obj => {
+      if (!obj.isMesh) return;
+      const n = obj.name;
+      // Match only when the keyword is a whole word — prevents "rim" matching inside "trim", etc.
+      if (!(/(?:^|[^a-zA-Z])(wheel|tire|tyre|rim)(?:[^a-zA-Z]|$)/i.test(n))) return;
+      // Exclude non-rotating body parts by name
+      if (/door|arch|well|fender|panel|liner|housing|trim|sill|skirt|rocker/i.test(n)) return;
+      // Exclude if any ancestor is a door object
+      for (let p = obj.parent; p; p = p.parent) {
+        if (/door/i.test(p.name)) return;
+      }
+      found.push(obj);
+    });
+    wheelsRef.current = found;
+
+    // Estimate wheel radius from the first wheel's bounding sphere (model space)
+    if (found.length > 0) {
+      const s = new THREE.Sphere();
+      new THREE.Box3().setFromObject(found[0]).getBoundingSphere(s);
+      wheelRadius.current = s.radius;
+    }
 
     const isMobile = window.innerWidth < 768;
     const bandTop = isMobile ? BAND_RIGHT_M : BAND_RIGHT;
@@ -85,6 +115,16 @@ function PorscheModel({ animRef }) {
     if (!groupRef.current || !geom) return;
 
     const x = animRef.current.carX;
+
+    // ── wheel rolling ──────────────────────────────────────────────────────
+    if (prevCarX.current !== null && wheelsRef.current.length > 0) {
+      const deltaX = x - prevCarX.current;
+      // World distance = model distance × scale  →  angle = worldDelta / (radius × scale)
+      const angle = -deltaX / (wheelRadius.current * geom.scale);
+      wheelsRef.current.forEach(w => { w.rotation.x += angle; });
+    }
+    prevCarX.current = x;
+
     // Where the band line sits (world Y) directly above this x
     const fx = (x + geom.halfW) / geom.viewW;            // 0 (left) → 1 (right)
     const bandFrac = geom.bandLeft + (geom.bandTop - geom.bandLeft) * fx;
@@ -111,7 +151,7 @@ function PorscheModel({ animRef }) {
   );
 }
 
-useGLTF.preload('/porsche911.glb');
+useGLTF.preload('/mercedes-_benz_w206_c220.glb');
 
 export default function CarScene() {
   const wrapperRef = useRef();
@@ -181,7 +221,7 @@ export default function CarScene() {
           <Environment preset="city" background={false} />
 
           <Suspense fallback={null}>
-            <PorscheModel animRef={animRef} />
+            <MercedesModel animRef={animRef} />
           </Suspense>
         </Canvas>
 

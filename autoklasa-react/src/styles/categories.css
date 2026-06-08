@@ -1,5 +1,6 @@
 .categories {
   background: var(--white);
+  padding-bottom: 10;
 }
 
 .cat-grid {
@@ -9,7 +10,7 @@
 }
 
 .cat-card {
-  background: #f0f0f0;
+  background: #ffffff;
   border-radius: 22px;
   padding: 44px 36px 36px;
   display: flex;

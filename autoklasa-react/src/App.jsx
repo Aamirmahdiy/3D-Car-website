@@ -6,6 +6,7 @@ import ProofTicker from './components/ProofTicker';
 import Categories from './components/Categories';
 import WhySection from './components/WhySection';
 import Benefits from './components/Benefits';
+import ReviewsCarScene from './components/ReviewsCarScene';
 import Reviews from './components/Reviews';
 import Faq from './components/Faq';
 import CtaBanner from './components/CtaBanner';
@@ -32,6 +33,7 @@ export default function App() {
           <Benefits />
         </div>
       </div>
+      <ReviewsCarScene />
       <Reviews />
       <Faq />
       <CtaBanner />

@@ -25,14 +25,6 @@ export default function Reviews() {
             <div className="section-label">Customer reviews</div>
             <h2 className="section-title" style={{ marginBottom: 0 }}>What do our customers say?</h2>
           </div>
-          <div className="google-badge">
-            <GoogleG size={26} />
-            <div>
-              <div className="badge-rating">4.6</div>
-              <div className="badge-stars">★★★★★</div>
-              <div className="badge-count">Google rating</div>
-            </div>
-          </div>
         </div>
 
         <div className="reviews-grid">
