@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Autoklasa – Kup samochód. Online.</title>
+    <!-- Start downloading the hero car during HTML parse, in parallel with the
+         JS bundle, so the sweep-in animation can play as early as possible. -->
+    <link rel="preload" href="/mercedes-_benz_w206_c220.glb" as="fetch" type="model/gltf-binary" crossorigin="anonymous" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />

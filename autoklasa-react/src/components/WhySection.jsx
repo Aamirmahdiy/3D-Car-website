@@ -4,6 +4,7 @@ import { useGLTF, Environment } from '@react-three/drei';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
+import { CITY_ENV } from './cityEnv';
 import '../styles/whySection.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -95,10 +96,32 @@ export default function WhySection() {
   const sectionRef = useRef();
   const _z0        = computeZScale();
   const animRef    = useRef({ carX: computeTravel(_z0), zScale: _z0 });
+  // Scoped render trigger for this canvas (frameloop="demand").
+  const invalidateRef = useRef(null);
+  // Whether the scene is on screen — gates the render loop entirely.
+  const [inView, setInView] = useState(true);
+
+  // Pause rendering completely while the section is scrolled out of view.
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+        if (entry.isIntersecting) invalidateRef.current?.();
+      },
+      { rootMargin: '200px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // Keep zScale in sync with window size so useFrame always has the right slope
   useEffect(() => {
-    const onResize = () => { animRef.current.zScale = computeZScale(); };
+    const onResize = () => {
+      animRef.current.zScale = computeZScale();
+      invalidateRef.current?.();
+    };
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -117,6 +140,7 @@ export default function WhySection() {
           start: 'top 57%',
           end:   'center center',
           scrub: 1,
+          onUpdate: () => invalidateRef.current?.(),
         },
       });
     }, sectionRef);
@@ -132,16 +156,18 @@ export default function WhySection() {
       {/* 2 — 3D canvas (DOM order puts it above dark without relying on z-index) */}
       <Canvas
         className="why-canvas"
+        frameloop={inView ? 'demand' : 'never'}
         camera={{ fov: FOV_WHY, position: [0, CAM_Y, CAM_Z] }}
-        onCreated={({ camera }) => {
+        onCreated={({ camera, invalidate }) => {
           camera.position.set(0, CAM_Y, CAM_Z);
           camera.lookAt(0, 0, 0);
+          invalidateRef.current = invalidate;
         }}
         gl={{ antialias: true, alpha: true }}
       >
         <ambientLight intensity={2} />
         <directionalLight position={[5, 10, 5]} intensity={3} castShadow />
-        <Environment preset="city" background={false} />
+        <Environment files={CITY_ENV} background={false} />
 
         <Suspense fallback={null}>
           <TopCarModel animRef={animRef} />

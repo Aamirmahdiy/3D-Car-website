@@ -4,6 +4,7 @@ import { useGLTF, Environment } from '@react-three/drei';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
+import { CITY_ENV } from './cityEnv';
 import '../styles/reviewsCarScene.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -43,12 +44,6 @@ function PorscheModel({ animRef }) {
       }
       found.push(obj);
     });
-
-    console.log('[ReviewsCarScene] wheel meshes found:', found.map(o => o.name));
-    if (found.length === 0) {
-      console.log('[ReviewsCarScene] all mesh names:');
-      clonedScene.traverse(obj => { if (obj.isMesh) console.log(' ', obj.name); });
-    }
 
     wheelsRef.current = found;
 
@@ -109,6 +104,25 @@ useGLTF.preload('/porsche911.glb');
 export default function ReviewsCarScene() {
   const sectionRef = useRef();
   const animRef    = useRef({ carX: TRAVEL });
+  // Scoped render trigger for this canvas (frameloop="demand").
+  const invalidateRef = useRef(null);
+  // Whether the scene is on screen — gates the render loop entirely.
+  const [inView, setInView] = useState(true);
+
+  // Pause rendering completely while the section is scrolled out of view.
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+        if (entry.isIntersecting) invalidateRef.current?.();
+      },
+      { rootMargin: '200px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     const anim = animRef.current;
@@ -126,6 +140,7 @@ export default function ReviewsCarScene() {
             start: 'top 85%',
             end:   'center center',
             scrub: 1,
+            onUpdate: () => invalidateRef.current?.(),
           },
         }
       );
@@ -138,17 +153,19 @@ export default function ReviewsCarScene() {
     <div className="reviews-car-section" ref={sectionRef}>
       <Canvas
         className="reviews-car-canvas"
+        frameloop={inView ? 'demand' : 'never'}
         camera={{ fov: FOV, position: [0, 0, CAM_DIST] }}
-        onCreated={({ camera }) => {
+        onCreated={({ camera, invalidate }) => {
           camera.position.set(0, 0, CAM_DIST);
           camera.lookAt(0, 0, 0);
+          invalidateRef.current = invalidate;
         }}
         gl={{ antialias: true }}
       >
         <ambientLight intensity={1.5} />
         <directionalLight position={[6, 8, 10]} intensity={2.5} />
         <directionalLight position={[-6, 4, -8]} intensity={0.8} />
-        <Environment preset="city" background={false} />
+        <Environment files={CITY_ENV} background={false} />
 
         <Suspense fallback={null}>
           <PorscheModel animRef={animRef} />

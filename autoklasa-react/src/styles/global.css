@@ -29,6 +29,15 @@ a { text-decoration: none; color: inherit; }
 ul { list-style: none; }
 img { display: block; max-width: 100%; }
 
+/* ── reserved space for deferred 3D sections ──
+   Mirrors the real section heights so mounting them on scroll causes no
+   layout shift and keeps GSAP ScrollTrigger positions accurate. */
+.defer-why     { height: calc(70vh + 80px); }
+.defer-reviews { height: 55vh; }
+@media (max-width: 768px) {
+  .defer-why { height: 55vh; }
+}
+
 /* ── shared section helpers ── */
 section { padding: 88px 24px; }
 .section-inner { max-width: 1200px; margin: 0 auto; }

@@ -4,6 +4,7 @@ import { useGLTF, Environment } from '@react-three/drei';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
+import { CITY_ENV } from './cityEnv';
 import '../styles/carScene.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -159,6 +160,25 @@ export default function CarScene() {
 
   // Shared animation state — tweened by GSAP, read by useFrame every frame.
   const animRef = useRef({ carX: TRAVEL });
+  // Scoped render trigger for this canvas (frameloop="demand").
+  const invalidateRef = useRef(null);
+  // Whether the scene is on screen — gates the render loop entirely.
+  const [inView, setInView] = useState(true);
+
+  // Pause rendering completely while the section is scrolled out of view.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        setInView(entry.isIntersecting);
+        if (entry.isIntersecting) invalidateRef.current?.();
+      },
+      { rootMargin: '200px 0px' }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   useEffect(() => {
     const anim = animRef.current;
@@ -172,6 +192,7 @@ export default function CarScene() {
       duration: 1.4,
       ease: 'power3.out',
       delay: 0.3,
+      onUpdate: () => invalidateRef.current?.(),
     });
 
     // Scroll: drive carX 0 → -TRAVEL with smooth scrub (mirrors WhySection approach)
@@ -188,6 +209,7 @@ export default function CarScene() {
             end: `+=${SCROLL_RANGE}`,
             scrub: 1,
             onUpdate: (self) => {
+              invalidateRef.current?.();
               if (entrance && self.progress > 0) {
                 entrance.kill();
                 entrance = null;
@@ -209,16 +231,18 @@ export default function CarScene() {
       <div className="car-scene-sticky">
         <Canvas
           className="car-canvas"
+          frameloop={inView ? 'demand' : 'never'}
           camera={{ fov: isMobile ? FOV_MOBILE : FOV, position: [0, 0, CAM_DIST] }}
-          onCreated={({ camera }) => {
+          onCreated={({ camera, invalidate }) => {
             camera.position.set(0, 0, CAM_DIST);
             camera.lookAt(0, 0, 0);
+            invalidateRef.current = invalidate;
           }}
           gl={{ antialias: true }}
         >
           <ambientLight intensity={1.5} />
           <directionalLight position={[6, 8, 10]} intensity={2.5} />
-          <Environment preset="city" background={false} />
+          <Environment files={CITY_ENV} background={false} />
 
           <Suspense fallback={null}>
             <MercedesModel animRef={animRef} />
