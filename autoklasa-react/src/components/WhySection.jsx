@@ -94,6 +94,7 @@ function TopCarModel({ animRef }) {
 
 export default function WhySection() {
   const sectionRef = useRef();
+  const isMobile   = typeof window !== 'undefined' && window.innerWidth < 768;
   const _z0        = computeZScale();
   const animRef    = useRef({ carX: computeTravel(_z0), zScale: _z0 });
   // Scoped render trigger for this canvas (frameloop="demand").
@@ -157,13 +158,14 @@ export default function WhySection() {
       <Canvas
         className="why-canvas"
         frameloop={inView ? 'demand' : 'never'}
+        dpr={[1, 2]}
         camera={{ fov: FOV_WHY, position: [0, CAM_Y, CAM_Z] }}
         onCreated={({ camera, invalidate }) => {
           camera.position.set(0, CAM_Y, CAM_Z);
           camera.lookAt(0, 0, 0);
           invalidateRef.current = invalidate;
         }}
-        gl={{ antialias: true, alpha: true }}
+        gl={{ antialias: !isMobile, alpha: true, powerPreference: 'high-performance' }}
       >
         <ambientLight intensity={2} />
         <directionalLight position={[5, 10, 5]} intensity={3} castShadow />

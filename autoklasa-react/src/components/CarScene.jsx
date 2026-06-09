@@ -232,13 +232,14 @@ export default function CarScene() {
         <Canvas
           className="car-canvas"
           frameloop={inView ? 'demand' : 'never'}
+          dpr={[1, 2]}
           camera={{ fov: isMobile ? FOV_MOBILE : FOV, position: [0, 0, CAM_DIST] }}
           onCreated={({ camera, invalidate }) => {
             camera.position.set(0, 0, CAM_DIST);
             camera.lookAt(0, 0, 0);
             invalidateRef.current = invalidate;
           }}
-          gl={{ antialias: true }}
+          gl={{ antialias: !isMobile, powerPreference: 'high-performance' }}
         >
           <ambientLight intensity={1.5} />
           <directionalLight position={[6, 8, 10]} intensity={2.5} />

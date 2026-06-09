@@ -9,7 +9,13 @@
     <link rel="preload" href="/mercedes-_benz_w206_c220.glb" as="fetch" type="model/gltf-binary" crossorigin="anonymous" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <!-- Load fonts without blocking first paint: fetch as a non-applied "print"
+         stylesheet, then promote to "all" once loaded. display=swap keeps text
+         visible in a fallback face until Inter arrives. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>

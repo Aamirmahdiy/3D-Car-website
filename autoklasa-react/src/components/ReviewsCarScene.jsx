@@ -103,6 +103,7 @@ useGLTF.preload('/porsche911.glb');
 
 export default function ReviewsCarScene() {
   const sectionRef = useRef();
+  const isMobile   = typeof window !== 'undefined' && window.innerWidth < 768;
   const animRef    = useRef({ carX: TRAVEL });
   // Scoped render trigger for this canvas (frameloop="demand").
   const invalidateRef = useRef(null);
@@ -154,13 +155,14 @@ export default function ReviewsCarScene() {
       <Canvas
         className="reviews-car-canvas"
         frameloop={inView ? 'demand' : 'never'}
+        dpr={[1, 2]}
         camera={{ fov: FOV, position: [0, 0, CAM_DIST] }}
         onCreated={({ camera, invalidate }) => {
           camera.position.set(0, 0, CAM_DIST);
           camera.lookAt(0, 0, 0);
           invalidateRef.current = invalidate;
         }}
-        gl={{ antialias: true }}
+        gl={{ antialias: !isMobile, powerPreference: 'high-performance' }}
       >
         <ambientLight intensity={1.5} />
         <directionalLight position={[6, 8, 10]} intensity={2.5} />

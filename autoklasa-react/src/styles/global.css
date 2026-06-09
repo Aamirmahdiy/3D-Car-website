@@ -29,6 +29,19 @@ a { text-decoration: none; color: inherit; }
 ul { list-style: none; }
 img { display: block; max-width: 100%; }
 
+/* Hidden placeholder blocks kept only for layout spacing: freeze any
+   animations inside them so an invisible element costs no ongoing work. */
+.frozen-placeholder * { animation-play-state: paused !important; }
+
+/* Skip layout/paint for tall, static, below-the-fold sections until they
+   approach the viewport. `auto` makes the browser remember each section's real
+   size after its first render, so the 600px estimate only matters pre-reveal.
+   Deliberately excludes the GSAP/3D sections, whose live measurements matter. */
+.how, .reviews, .faq, .cta-banner, .contact, footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
+
 /* ── reserved space for deferred 3D sections ──
    Mirrors the real section heights so mounting them on scroll causes no
    layout shift and keeps GSAP ScrollTrigger positions accurate. */

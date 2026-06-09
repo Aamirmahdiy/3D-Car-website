@@ -34,12 +34,12 @@ export default function App() {
       </DeferUntilNear>
       <div style={{ background: '#000', height: '30vh' }} />
       <div style={{ background: '#000', overflow: 'hidden' }}>
-        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+        <div className="frozen-placeholder" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
           <ProofTicker />
         </div>
       </div>
       <div style={{ background: '#000', overflow: 'hidden' }}>
-        <div style={{ visibility: 'hidden', pointerEvents: 'none' }}>
+        <div className="frozen-placeholder" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
           <Benefits />
         </div>
       </div>
