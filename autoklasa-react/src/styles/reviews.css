@@ -2,11 +2,16 @@
 
 .reviews-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
   margin-bottom: 48px;
   flex-wrap: wrap;
   gap: 20px;
+}
+
+.reviews-gold {
+  color: var(--gold);
 }
 
 .google-badge {
@@ -23,13 +28,36 @@
 .badge-stars { color: #fbbf24; font-size: 0.9rem; }
 .badge-count { font-size: 0.78rem; color: var(--gray-500); }
 
-.reviews-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
+/* Continuous side-to-side marquee (independent of page scroll) */
+.reviews-marquee {
+  overflow: hidden;
+  width: 100%;
+  /* fade the edges so cards slide in/out softly */
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+          mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+.reviews-track {
+  display: flex;
+  width: max-content;
+  align-items: stretch;
+  animation: reviews-scroll 25s linear infinite;
+}
+.reviews-track:hover { animation-play-state: paused; }
+
+@keyframes reviews-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviews-track { animation: none; }
 }
 
 .review-card {
+  flex-shrink: 0;
+  width: 340px;
+  margin-right: 22px;
   background: var(--white);
   border-radius: 18px;
   padding: 28px 24px;
@@ -100,5 +128,6 @@
 }
 .reviews-more a:hover { background: var(--gray-100); border-color: var(--gray-500); }
 
-@media (max-width: 1024px) { .reviews-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 768px)  { .reviews-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  .review-card { width: 80vw; margin-right: 16px; }
+}

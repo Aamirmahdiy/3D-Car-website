@@ -21,32 +21,33 @@ export default function Reviews() {
     <section className="reviews">
       <div className="section-inner">
         <div className="reviews-header">
-          <div>
-            <div className="section-label">Customer reviews</div>
-            <h2 className="section-title" style={{ marginBottom: 0 }}>What do our customers say?</h2>
-          </div>
+          <h2 className="section-title" style={{ marginBottom: 0 }}>
+            customer's <span className="reviews-gold">opinion</span>
+          </h2>
         </div>
 
-        <div className="reviews-grid">
-          {REVIEWS.map((r) => (
-            <div className="review-card" key={r.name}>
-              <div className="review-top">
-                <div className="reviewer">
-                  <div className={`reviewer-avatar ${r.avatarClass}`}>{r.initial}</div>
-                  <div>
-                    <div className="reviewer-name">{r.name}</div>
-                    <div className="reviewer-date">{r.date}</div>
+        <div className="reviews-marquee">
+          <div className="reviews-track">
+            {[...REVIEWS, ...REVIEWS].map((r, i) => (
+              <div className="review-card" key={i} aria-hidden={i >= REVIEWS.length}>
+                <div className="review-top">
+                  <div className="reviewer">
+                    <div className={`reviewer-avatar ${r.avatarClass}`}>{r.initial}</div>
+                    <div>
+                      <div className="reviewer-name">{r.name}</div>
+                      <div className="reviewer-date">{r.date}</div>
+                    </div>
                   </div>
+                  <div className="review-stars">★★★★★</div>
                 </div>
-                <div className="review-stars">★★★★★</div>
+                <p className="review-text">{r.text}</p>
+                <div className="review-source">
+                  <GoogleG size={14} />
+                  Review from Google
+                </div>
               </div>
-              <p className="review-text">{r.text}</p>
-              <div className="review-source">
-                <GoogleG size={14} />
-                Review from Google
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         <div className="reviews-more">
