@@ -4,15 +4,15 @@ export default function CtaBanner() {
   return (
     <div className="cta-banner">
       <div className="cta-inner">
-        <div className="section-label">Ready for a new car?</div>
-        <h2 className="section-title">Order a free<br />car search</h2>
-        <p>Describe your requirements and we'll find the perfect car for you. No commitment, no upfront costs.</p>
+        <div className="section-label">آماده یک خودروی جدید هستید؟</div>
+        <h2 className="section-title">سفارش جستجوی<br />رایگان خودرو</h2>
+        <p>نیازهای خود را شرح دهید تا خودروی ایده‌آل را برای شما پیدا کنیم. بدون تعهد، بدون هزینه اولیه.</p>
         <div className="cta-actions">
           <a href="#" className="btn-primary">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
             </svg>
-            Order a car search
+            سفارش جستجوی خودرو
           </a>
           <a href="tel:+48579779220" className="btn-secondary">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">

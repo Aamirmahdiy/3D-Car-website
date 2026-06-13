@@ -10,10 +10,10 @@ const GoogleG = ({ size = 14 }) => (
 );
 
 const REVIEWS = [
-  { initial: 'S', avatarClass: 'avatar-1', name: 'Sławomir S.', date: '2 months ago',  text: 'Professional service at the highest level. Help choosing the car, history verification, home delivery. I recommend to anyone looking for a reliable importer.' },
-  { initial: 'M', avatarClass: 'avatar-2', name: 'Mateusz M.',  date: '3 months ago', text: 'They found exactly the car I asked for. The whole process was quick and problem-free. The car arrived on time with no surprises whatsoever. Highly recommend!' },
-  { initial: 'J', avatarClass: 'avatar-3', name: 'Jakub A.',     date: '4 months ago', text: 'Great company, I recommend wholeheartedly. Always fast communication and expert advice. You can tell they genuinely care about the customer, not just the profit.' },
-  { initial: 'A', avatarClass: 'avatar-4', name: 'Agnieszka S.', date: '5 months ago', text: 'Amazing service! I never thought buying a car abroad could be this simple. Autoklasa handled everything from A to Z. My new Mercedes is absolutely perfect!' },
+  { initial: 'س', avatarClass: 'avatar-1', name: 'سامان ر.',  date: '۲ ماه پیش',  text: 'خدمات حرفه‌ای در بالاترین سطح. کمک در انتخاب خودرو، بررسی تاریخچه، تحویل درب منزل. به هر کسی که دنبال یک واردکننده مطمئن است توصیه می‌کنم.' },
+  { initial: 'م', avatarClass: 'avatar-2', name: 'مهدی ک.',  date: '۳ ماه پیش', text: 'دقیقاً همان خودرویی را که خواسته بودم پیدا کردند. کل فرایند سریع و بدون دردسر بود. خودرو سر وقت و بدون هیچ غافلگیری‌ای رسید. کاملاً توصیه می‌کنم!' },
+  { initial: 'ج', avatarClass: 'avatar-3', name: 'جواد الف.', date: '۴ ماه پیش', text: 'شرکت عالی، از صمیم قلب توصیه می‌کنم. همیشه ارتباط سریع و مشاوره تخصصی. مشخص است که واقعاً به مشتری اهمیت می‌دهند، نه فقط به سود.' },
+  { initial: 'آ', avatarClass: 'avatar-4', name: 'آناهیتا س.', date: '۵ ماه پیش', text: 'خدمات فوق‌العاده! هیچ‌وقت فکر نمی‌کردم خرید خودرو از خارج این‌قدر ساده باشد. ماشین خوب همه‌چیز را از صفر تا صد انجام داد. مرسدس جدیدم کاملاً بی‌نقص است!' },
 ];
 
 export default function Reviews() {
@@ -22,7 +22,7 @@ export default function Reviews() {
       <div className="section-inner">
         <div className="reviews-header">
           <h2 className="section-title" style={{ marginBottom: 0 }}>
-            customer's <span className="reviews-gold">opinion</span>
+            <span className="reviews-gold">نظرات</span> مشتریان
           </h2>
         </div>
 
@@ -43,7 +43,7 @@ export default function Reviews() {
                 <p className="review-text">{r.text}</p>
                 <div className="review-source">
                   <GoogleG size={14} />
-                  Review from Google
+                  نظر از گوگل
                 </div>
               </div>
             ))}
@@ -52,8 +52,8 @@ export default function Reviews() {
 
         <div className="reviews-more">
           <a href="#">
-            See all reviews (+178)
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            مشاهده همه نظرات (+۱۷۸)
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style={{ transform: 'scaleX(-1)' }}>
               <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
             </svg>
           </a>

@@ -14,7 +14,6 @@ const FOV         = 35;
 const COVERAGE    = 1;
 const FLIP_FACING = true;
 const TRAVEL      = 6;                  // car drifts from +TRAVEL (right) to 0 (centre)
-const WHEEL_ROLL  = Math.PI / TRAVEL;   // half a turn (π) across the full scroll
 
 function PorscheModel({ animRef }) {
   const { scene }       = useGLTF('/porsche911.glb');
@@ -24,6 +23,7 @@ function PorscheModel({ animRef }) {
 
   // Wheel rolling state
   const wheelsRef      = useRef([]);
+  const wheelRadius    = useRef(1);   // model-space radius, set once geometry loads
   const prevCarX       = useRef(null);
 
   useEffect(() => {
@@ -36,8 +36,8 @@ function PorscheModel({ animRef }) {
       const n = obj.name;
       // Match only when the keyword is a whole word — prevents "rim" matching inside "trim", etc.
       if (!(/(?:^|[^a-zA-Z])(wheel|tire|tyre|rim)(?:[^a-zA-Z]|$)/i.test(n))) return;
-      // Exclude non-rotating body parts by name
-      if (/door|arch|well|fender|panel|liner|housing|trim|sill|skirt|rocker/i.test(n)) return;
+      // Exclude non-rotating body parts by name (incl. brake calipers/discs)
+      if (/door|arch|well|fender|panel|liner|housing|trim|sill|skirt|rocker|call?iper|brake|disc/i.test(n)) return;
       // Exclude if any ancestor is a door object
       for (let p = obj.parent; p; p = p.parent) {
         if (/door/i.test(p.name)) return;
@@ -45,7 +45,51 @@ function PorscheModel({ animRef }) {
       found.push(obj);
     });
 
-    wheelsRef.current = found;
+    // ── build one spin pivot per wheel ─────────────────────────────────────
+    // This model's wheels are a single combined node of hundreds of fragment
+    // meshes, each sitting at its own local offset around a shared hub. Spinning
+    // the fragments individually makes them fly apart and scrambles the radius.
+    // So cluster the fragments into wheels by model-space position
+    // (front/rear × left/right) and spin a single pivot centred on each hub.
+    const pivots = [];
+    let radius = 1;
+    if (found.length > 0) {
+      clonedScene.updateWorldMatrix(true, true);
+      const toModel = new THREE.Matrix4().copy(clonedScene.matrixWorld).invert();
+      const tmp     = new THREE.Vector3();
+
+      const clusters = new Map();   // "FR" | "FL" | "BR" | "BL" → { meshes, sum, n, box }
+      found.forEach(m => {
+        const box = new THREE.Box3().setFromObject(m);      // world space
+        const cWorld = box.getCenter(new THREE.Vector3());
+        const cModel = cWorld.clone().applyMatrix4(toModel);
+        const key = `${cModel.z >= 0 ? 'F' : 'B'}${cModel.x >= 0 ? 'R' : 'L'}`;
+        let c = clusters.get(key);
+        if (!c) { c = { meshes: [], sum: new THREE.Vector3(), n: 0, box: new THREE.Box3() }; clusters.set(key, c); }
+        c.meshes.push(m);
+        c.sum.add(cModel);
+        c.n++;
+        c.box.union(box);
+      });
+
+      clusters.forEach(c => {
+        const center = c.sum.multiplyScalar(1 / c.n);       // model-space wheel centre
+        const pivot  = new THREE.Group();
+        pivot.position.copy(center);
+        clonedScene.add(pivot);
+        // Reparent the wheel's fragments under the pivot, preserving world transform.
+        c.meshes.forEach(m => pivot.attach(m));
+        pivots.push(pivot);
+      });
+
+      // Wheel radius (model space) from one wheel's in-plane extent (axle = X).
+      const first = clusters.values().next().value;
+      first.box.getSize(tmp);
+      radius = Math.max(tmp.y, tmp.z) / 2 || 1;
+    }
+
+    wheelsRef.current  = pivots;
+    wheelRadius.current = radius;
 
     // ── geometry / scale setup (unchanged) ────────────────────────────────
     const box    = new THREE.Box3().setFromObject(clonedScene);
@@ -76,8 +120,8 @@ function PorscheModel({ animRef }) {
     // ── wheel rolling ──────────────────────────────────────────────────────
     if (prevCarX.current !== null && wheelsRef.current.length > 0) {
       const deltaX = x - prevCarX.current;
-      // Fixed roll: half a turn (π) across the full TRAVEL of the scroll
-      const angle = -deltaX * WHEEL_ROLL;
+      // World distance = model distance × scale  →  angle = worldDelta / (radius × scale)
+      const angle = -deltaX / (wheelRadius.current * geom.scale);
       wheelsRef.current.forEach(w => { w.rotation.x += angle; });
     }
     prevCarX.current = x;

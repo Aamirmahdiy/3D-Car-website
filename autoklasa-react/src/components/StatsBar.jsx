@@ -1,11 +1,11 @@
 import '../styles/statsBar.css';
 
 const STATS = [
-  { number: '4000', suffix: '+', desc: 'satisfied customers', gold: true },
-  { number: '4.', suffix: '6',  desc: 'Google rating' },
-  { number: '10',  suffix: '+', desc: 'years of experience' },
-  { number: '15',  suffix: '+', desc: 'import countries' },
-  { number: '100', suffix: '%', desc: 'mileage verification' },
+  { number: '۴۰۰۰', suffix: '+', desc: 'مشتری راضی', gold: true },
+  { number: '۴٫', suffix: '۶',  desc: 'امتیاز گوگل' },
+  { number: '۱۰',  suffix: '+', desc: 'سال تجربه' },
+  { number: '۱۵',  suffix: '+', desc: 'کشور واردات' },
+  { number: '۱۰۰', suffix: '٪', desc: 'بررسی کارکرد' },
 ];
 
 export default function StatsBar() {
@@ -24,7 +24,7 @@ export default function StatsBar() {
         </div>
 
         <a href="#reviews" className="btn-reviews">
-          Read the reviews
+          خواندن نظرات
         </a>
       </div>
     </div>

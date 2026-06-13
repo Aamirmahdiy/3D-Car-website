@@ -6,10 +6,10 @@ const ShieldIcon= () => <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.8
 const TruckIcon = () => <svg viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4z"/></svg>;
 
 const ITEMS = [
-  { icon: <StarIcon />,   text: '4.6 on Google' },
-  { icon: <CheckIcon />,  text: 'Over 4,000 satisfied customers' },
-  { icon: <ShieldIcon />, text: '100% mileage verification' },
-  { icon: <TruckIcon />,  text: 'Delivery to your address' },
+  { icon: <StarIcon />,   text: 'امتیاز ۴٫۶ در گوگل' },
+  { icon: <CheckIcon />,  text: 'بیش از ۴٬۰۰۰ مشتری راضی' },
+  { icon: <ShieldIcon />, text: '۱۰۰٪ بررسی کارکرد' },
+  { icon: <TruckIcon />,  text: 'تحویل درب منزل شما' },
 ];
 
 export default function ProofTicker() {

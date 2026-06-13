@@ -178,8 +178,8 @@ export default function WhySection() {
 
       {/* 3 — text (DOM order puts it above canvas without relying on z-index) */}
       <div className="why-text">
-        <div><span className="why-black">why </span><span className="why-gold">is it</span></div>
-        <div><span className="why-gold">worth it?</span></div>
+        <div><span className="why-black">چرا </span><span className="why-gold">ارزشش را</span></div>
+        <div><span className="why-gold">دارد؟</span></div>
       </div>
 
       {/* 4 — saving time — lower-right */}
@@ -190,16 +190,16 @@ export default function WhySection() {
           </svg>
         </div>
         <div>
-          <div className="why-feature-title">Saving time</div>
-          <div className="why-feature-desc">Don't waste time browsing questionable offers – we will find the best offers for you and take care of all the formalities.</div>
+          <div className="why-feature-title">صرفه‌جویی در زمان</div>
+          <div className="why-feature-desc">وقت خود را برای گشتن میان آگهی‌های مشکوک هدر ندهید – ما بهترین گزینه‌ها را برای شما پیدا می‌کنیم و تمام تشریفات اداری را انجام می‌دهیم.</div>
         </div>
       </div>
 
       {/* 5 — security — lower-left */}
       <div className="why-feature why-feature--left">
         <div>
-          <div className="why-feature-title">Security</div>
-          <div className="why-feature-desc">We only buy cars whose mileage can be confirmed by documents from the authorized service center.</div>
+          <div className="why-feature-title">امنیت</div>
+          <div className="why-feature-desc">ما فقط خودروهایی را می‌خریم که کارکرد آن‌ها با اسناد نمایندگی مجاز قابل تأیید باشد.</div>
         </div>
       </div>
     </section>

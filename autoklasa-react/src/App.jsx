@@ -3,9 +3,7 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import CarScene from './components/CarScene';
 import StatsBar from './components/StatsBar';
-import ProofTicker from './components/ProofTicker';
 import Categories from './components/Categories';
-import Benefits from './components/Benefits';
 import Reviews from './components/Reviews';
 import Faq from './components/Faq';
 import CtaBanner from './components/CtaBanner';
@@ -32,17 +30,11 @@ export default function App() {
           <WhySection />
         </Suspense>
       </DeferUntilNear>
-      <div style={{ background: '#000', height: '30vh' }} />
-      <div style={{ background: '#000', overflow: 'hidden' }}>
-        <div className="frozen-placeholder" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
-          <ProofTicker />
-        </div>
-      </div>
-      <div style={{ background: '#000', overflow: 'hidden' }}>
-        <div className="frozen-placeholder" style={{ visibility: 'hidden', pointerEvents: 'none' }}>
-          <Benefits />
-        </div>
-      </div>
+      {/* Black gap that hosts WhySection's overflowing features (the امنیت/Security
+          card floats down to bottom: -520px). Sized just tall enough to clear it,
+          so the third car (ReviewsCarScene) sits right below — tune this height to
+          move the third car closer/further. */}
+      <div style={{ background: '#000', height: '540px' }} />
       <DeferUntilNear placeholderClassName="defer-reviews">
         <Suspense fallback={<div className="defer-reviews" />}>
           <ReviewsCarScene />

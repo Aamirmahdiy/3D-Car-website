@@ -1,8 +1,8 @@
 import '../styles/categories.css';
 
 const CARDS = [
-  { title: 'Cars', sub: 'from Europe' },
-  { title: 'Cars', sub: 'from China' },
+  { title: 'خودرو', sub: 'از اروپا' },
+  { title: 'خودرو', sub: 'از چین' },
 ];
 
 export default function Categories() {
@@ -17,9 +17,9 @@ export default function Categories() {
                 <div className="cat-sub">{c.sub}</div>
               </div>
               <div className="cat-actions">
-                <a href="#" className="cat-btn cat-btn--outline">See the offer</a>
-                <a href="#" className="cat-btn cat-btn--gold">Ask for a quote</a>
-                <a href="#" className="cat-btn cat-btn--dark">Search for a car</a>
+                <a href="#" className="cat-btn cat-btn--outline">مشاهده خدمات</a>
+                <a href="#" className="cat-btn cat-btn--gold">درخواست قیمت</a>
+                <a href="#" className="cat-btn cat-btn--dark">جستجوی خودرو</a>
               </div>
             </div>
           ))}

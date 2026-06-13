@@ -3,23 +3,23 @@ import '../styles/benefits.css';
 const BENEFITS = [
   {
     icon: <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L12 15.45 7.77 18l1.12-4.81-3.73-3.23 4.92-.42L12 5l1.92 4.53 4.92.42-3.73 3.23L16.23 18z"/></svg>,
-    title: 'Save time',
-    text: 'Stop wasting time browsing thousands of questionable listings. Our experts will find the best car for you within days.',
+    title: 'صرفه‌جویی در زمان',
+    text: 'دیگر وقت خود را برای گشتن میان هزاران آگهی مشکوک تلف نکنید. متخصصان ما در عرض چند روز بهترین خودرو را برای شما پیدا می‌کنند.',
   },
   {
     icon: <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>,
-    title: 'Full security',
-    text: 'Every car is verified against authorised service documents. We check the service history and actual mileage of the vehicle.',
+    title: 'امنیت کامل',
+    text: 'هر خودرو بر اساس اسناد نمایندگی مجاز بررسی می‌شود. ما تاریخچه سرویس و کارکرد واقعی خودرو را کنترل می‌کنیم.',
   },
   {
     icon: <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>,
-    title: 'Zero paperwork',
-    text: 'We handle all formalities, customs clearance, translations, and registration on your behalf — with no involvement from you.',
+    title: 'بدون کاغذبازی',
+    text: 'ما تمام تشریفات اداری، ترخیص گمرکی، ترجمه و پلاک‌گذاری را به جای شما انجام می‌دهیم — بدون هیچ دخالتی از طرف شما.',
   },
   {
     icon: <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>,
-    title: '10 years of experience',
-    text: 'Over 4,000 satisfied customers and a 4.6 Google rating are proof that we truly know what we\'re doing.',
+    title: '۱۰ سال تجربه',
+    text: 'بیش از ۴٬۰۰۰ مشتری راضی و امتیاز ۴٫۶ در گوگل، گواه این است که ما واقعاً کارمان را بلدیم.',
   },
 ];
 
@@ -27,9 +27,9 @@ export default function Benefits() {
   return (
     <section className="benefits">
       <div className="section-inner">
-        <div className="section-label">Why us</div>
-        <h2 className="section-title">Your safety is<br />our priority</h2>
-        <p className="section-desc">Over 10 years we have built processes that protect you at every stage of the purchase.</p>
+        <div className="section-label">چرا ما</div>
+        <h2 className="section-title">امنیت شما<br />اولویت ماست</h2>
+        <p className="section-desc">در طول بیش از ۱۰ سال، فرایندهایی ساخته‌ایم که در تمام مراحل خرید از شما محافظت می‌کنند.</p>
 
         <div className="benefits-grid">
           {BENEFITS.map((b) => (

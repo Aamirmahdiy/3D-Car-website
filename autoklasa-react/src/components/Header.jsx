@@ -9,12 +9,12 @@ export default function Header() {
       <header>
         <div className="nav-inner">
           <nav>
-            <a href="#">About the company</a>
-            <a href="#">Offer</a>
-            <a href="#">Blog</a>
-            <a href="#">Opinions</a>
-            <a href="#">Contact</a>
-            <a href="#" className="btn-nav">Order a car search</a>
+            <a href="#">درباره شرکت</a>
+            <a href="#">خدمات</a>
+            <a href="#">وبلاگ</a>
+            <a href="#">نظرات</a>
+            <a href="#">تماس</a>
+            <a href="#" className="btn-nav">سفارش جستجوی خودرو</a>
           </nav>
 
           <button className="hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
@@ -24,12 +24,12 @@ export default function Header() {
       </header>
 
       <div className={`mobile-nav${menuOpen ? ' open' : ''}`}>
-        <a href="#" onClick={() => setMenuOpen(false)}>About the company</a>
-        <a href="#" onClick={() => setMenuOpen(false)}>Offer</a>
-        <a href="#" onClick={() => setMenuOpen(false)}>Blog</a>
-        <a href="#" onClick={() => setMenuOpen(false)}>Opinions</a>
-        <a href="#" onClick={() => setMenuOpen(false)}>Contact</a>
-        <a href="#" onClick={() => setMenuOpen(false)} style={{ color: 'var(--white)' }}>Order a car search</a>
+        <a href="#" onClick={() => setMenuOpen(false)}>درباره شرکت</a>
+        <a href="#" onClick={() => setMenuOpen(false)}>خدمات</a>
+        <a href="#" onClick={() => setMenuOpen(false)}>وبلاگ</a>
+        <a href="#" onClick={() => setMenuOpen(false)}>نظرات</a>
+        <a href="#" onClick={() => setMenuOpen(false)}>تماس</a>
+        <a href="#" onClick={() => setMenuOpen(false)} style={{ color: 'var(--white)' }}>سفارش جستجوی خودرو</a>
       </div>
     </>
   );

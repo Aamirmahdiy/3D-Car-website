@@ -14,33 +14,33 @@ export default function Footer() {
                   <circle cx="16.5" cy="14.5" r="1.5"/>
                 </svg>
               </div>
-              <span className="logo-text">auto<span>klasa</span></span>
+              <span className="logo-text">ماشین<span>خوب</span></span>
             </a>
-            <p>Professional car importer from Europe and China. We find, verify, and deliver your dream car — safely and stress-free.</p>
+            <p>واردکننده حرفه‌ای خودرو از اروپا و چین. ما خودروی رویایی شما را پیدا می‌کنیم، بررسی می‌کنیم و تحویل می‌دهیم — ایمن و بدون دردسر.</p>
           </div>
 
           <div className="footer-col">
-            <h4>Company</h4>
+            <h4>شرکت</h4>
             <ul>
-              {['About us', 'Blog', 'Reviews', 'Careers', 'Contact'].map(l => (
+              {['درباره ما', 'وبلاگ', 'نظرات', 'فرصت‌های شغلی', 'تماس'].map(l => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
             </ul>
           </div>
 
           <div className="footer-col">
-            <h4>Offer</h4>
+            <h4>خدمات</h4>
             <ul>
-              {['Cars from Europe', 'Cars from China', 'Order a search', 'Financing', 'Get a quote'].map(l => (
+              {['خودرو از اروپا', 'خودرو از چین', 'سفارش جستجو', 'تأمین مالی', 'دریافت قیمت'].map(l => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
             </ul>
           </div>
 
           <div className="footer-col">
-            <h4>Information</h4>
+            <h4>اطلاعات</h4>
             <ul>
-              {['Privacy policy', 'Terms of service', 'GDPR', 'Sitemap'].map(l => (
+              {['حریم خصوصی', 'شرایط استفاده از خدمات', 'حفاظت از داده‌ها', 'نقشه سایت'].map(l => (
                 <li key={l}><a href="#">{l}</a></li>
               ))}
             </ul>
@@ -48,7 +48,7 @@ export default function Footer() {
         </div>
 
         <div className="footer-bottom">
-          <span>&copy; 2026 Autoklasa.pl — All rights reserved</span>
+          <span>&copy; ۲۰۲۶ ماشین خوب — تمامی حقوق محفوظ است</span>
           <div className="footer-socials">
             <a href="#" className="social-btn" title="Facebook">
               <svg viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>

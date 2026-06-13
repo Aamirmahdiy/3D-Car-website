@@ -2,18 +2,18 @@ import { useState } from 'react';
 import '../styles/faq.css';
 
 const FAQ_DATA = [
-  { q: 'How does the car buying process work at Autoklasa?', a: 'It\'s simple: fill in a form with your requirements, our consultant contacts you, we search for the right car, verify it, and deliver it to your specified address.' },
-  { q: 'How long does it take to import a car?', a: 'The lead time depends on model availability. Typically it takes 2–6 weeks. Cars from Europe arrive faster, while cars from China usually take 4–8 weeks.' },
-  { q: 'Which countries do you import cars from?', a: 'We primarily import from Germany, Netherlands, Belgium, France, Italy, Austria, and Switzerland. For Chinese vehicles we work directly with authorised distributors in China.' },
-  { q: 'Can I finance the purchase of a car?', a: 'Yes — we offer financing through leasing or a car loan. We work with leading financial institutions and will help you choose the best option for your situation.' },
-  { q: 'How do you verify the mileage?', a: 'We check authorised service documents, European vehicle history databases (CarVertical, Carfax), and physically inspect the car before purchase.' },
-  { q: 'Is the car covered by a warranty?', a: 'Imported cars may still have an active manufacturer\'s warranty. We inform you about this with every offer. We also offer the option to purchase an additional mechanical warranty.' },
-  { q: 'Are there any additional customs fees?', a: 'Cars imported from EU countries are duty-free. For vehicles from China, import duty applies and is included in the final quote. We always provide a transparent all-in price.' },
-  { q: 'Can I see the car before buying?', a: 'Yes — we organise live video presentations of the car. We can also arrange your visit to the seller. Once the car arrives in Poland, you can inspect it before finalising the transaction.' },
-  { q: 'What if the car doesn\'t meet my expectations?', a: 'We establish your exact requirements before every transaction. If the delivered vehicle significantly differs from the description, we resolve the matter individually and protect your interests.' },
-  { q: 'What documents will I receive?', a: 'You receive a complete set: purchase invoice, original vehicle documents, mileage verification report, customs documents (if applicable), and all documents needed for registration.' },
-  { q: 'Can I specify exact equipment?', a: 'Absolutely! The more detailed your requirements (colour, engine, equipment, year), the better we can match the offer. We can search for a specific car for months if needed.' },
-  { q: 'What are the total import costs?', a: 'The total cost covers the car price, transport, transit insurance, customs fees (if applicable), homologation, and our commission. We always provide a clear, all-inclusive quote before we start.' },
+  { q: 'فرایند خرید خودرو در ماشین خوب چگونه است؟', a: 'ساده است: فرمی با نیازهای خود را پر می‌کنید، مشاور ما با شما تماس می‌گیرد، ما خودروی مناسب را جستجو می‌کنیم، آن را بررسی کرده و به آدرس مشخص‌شده شما تحویل می‌دهیم.' },
+  { q: 'واردات یک خودرو چقدر طول می‌کشد؟', a: 'مدت زمان به موجود بودن مدل بستگی دارد. معمولاً ۲ تا ۶ هفته طول می‌کشد. خودروهای اروپایی سریع‌تر می‌رسند، در حالی که خودروهای چینی معمولاً ۴ تا ۸ هفته زمان می‌برند.' },
+  { q: 'از چه کشورهایی خودرو وارد می‌کنید؟', a: 'ما عمدتاً از آلمان، هلند، بلژیک، فرانسه، ایتالیا، اتریش و سوئیس واردات می‌کنیم. برای خودروهای چینی مستقیماً با توزیع‌کنندگان مجاز در چین همکاری داریم.' },
+  { q: 'آیا می‌توانم خرید خودرو را اقساطی پرداخت کنم؟', a: 'بله — ما امکان تأمین مالی از طریق لیزینگ یا وام خودرو را فراهم می‌کنیم. با مؤسسات مالی معتبر همکاری داریم و به شما کمک می‌کنیم بهترین گزینه را متناسب با شرایطتان انتخاب کنید.' },
+  { q: 'کارکرد خودرو را چگونه بررسی می‌کنید؟', a: 'ما اسناد نمایندگی مجاز، پایگاه‌های داده تاریخچه خودرو در اروپا (CarVertical، Carfax) را بررسی کرده و پیش از خرید خودرو را به‌صورت فیزیکی بازرسی می‌کنیم.' },
+  { q: 'آیا خودرو گارانتی دارد؟', a: 'خودروهای وارداتی ممکن است هنوز گارانتی فعال کارخانه را داشته باشند. ما در هر پیشنهاد این موضوع را به شما اطلاع می‌دهیم. همچنین امکان خرید گارانتی مکانیکی اضافی را نیز ارائه می‌کنیم.' },
+  { q: 'آیا هزینه‌های گمرکی اضافی وجود دارد؟', a: 'خودروهای وارداتی از کشورهای اتحادیه اروپا از عوارض معاف هستند. برای خودروهای چینی عوارض واردات اعمال می‌شود و در قیمت نهایی لحاظ می‌گردد. ما همیشه قیمتی شفاف و همه‌چیز‌شامل ارائه می‌دهیم.' },
+  { q: 'آیا می‌توانم خودرو را پیش از خرید ببینم؟', a: 'بله — ما ارائه‌های ویدیویی زنده از خودرو ترتیب می‌دهیم. همچنین می‌توانیم بازدید شما از فروشنده را هماهنگ کنیم. پس از رسیدن خودرو، می‌توانید پیش از نهایی کردن معامله آن را بازرسی کنید.' },
+  { q: 'اگر خودرو با انتظارات من مطابقت نداشت چه؟', a: 'ما پیش از هر معامله نیازهای دقیق شما را مشخص می‌کنیم. اگر خودروی تحویل‌داده‌شده تفاوت قابل‌توجهی با توضیحات داشته باشد، موضوع را به‌صورت موردی حل کرده و از منافع شما محافظت می‌کنیم.' },
+  { q: 'چه مدارکی دریافت خواهم کرد؟', a: 'شما یک مجموعه کامل دریافت می‌کنید: فاکتور خرید، اسناد اصلی خودرو، گزارش بررسی کارکرد، اسناد گمرکی (در صورت لزوم) و تمام مدارک لازم برای پلاک‌گذاری.' },
+  { q: 'آیا می‌توانم آپشن‌های دقیق را مشخص کنم؟', a: 'حتماً! هرچه نیازهای شما دقیق‌تر باشد (رنگ، موتور، آپشن‌ها، سال ساخت)، ما بهتر می‌توانیم پیشنهاد مناسب را پیدا کنیم. در صورت نیاز می‌توانیم ماه‌ها برای یک خودروی خاص جستجو کنیم.' },
+  { q: 'هزینه کل واردات چقدر است؟', a: 'هزینه کل شامل قیمت خودرو، حمل‌ونقل، بیمه ترانزیت، عوارض گمرکی (در صورت لزوم)، هومولوگیشن و کمیسیون ما می‌شود. ما همیشه پیش از شروع، قیمتی شفاف و همه‌چیز‌شامل ارائه می‌دهیم.' },
 ];
 
 const PlusIcon = () => <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>;
@@ -26,8 +26,8 @@ export default function Faq() {
     <section className="faq">
       <div className="section-inner">
         <div className="faq-header">
-          <div className="section-label" style={{ justifyContent: 'center' }}>Have questions?</div>
-          <h2 className="section-title">Frequently asked<br />questions</h2>
+          <div className="section-label" style={{ justifyContent: 'center' }}>سؤالی دارید؟</div>
+          <h2 className="section-title">سؤالات<br />متداول</h2>
         </div>
 
         <div className="faq-grid">

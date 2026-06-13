@@ -4,19 +4,19 @@ export default function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1>Buy a Car. <em>Online.</em></h1>
+        <h1>خرید خودرو. <em>آنلاین.</em></h1>
 
-        <p>With us, you'll save time and stress. Don't search for a car on your own, leave it in the hands of the experts.</p>
+        <p>با ما در وقت و انرژی خود صرفه‌جویی می‌کنید. خودتان دنبال خودرو نگردید، آن را به دست متخصصان بسپارید.</p>
 
         <div className="hero-checks">
-          <span>We are looking for</span>
-          <span>We verify</span>
-          <span>We deliver</span>
+          <span>جستجو می‌کنیم</span>
+          <span>بررسی می‌کنیم</span>
+          <span>تحویل می‌دهیم</span>
         </div>
 
         <div className="hero-actions">
-          <a href="#" className="btn-hero-outline">See the offer</a>
-          <a href="#" className="btn-hero-gold">Ask for a quote</a>
+          <a href="#" className="btn-hero-outline">مشاهده خدمات</a>
+          <a href="#" className="btn-hero-gold">درخواست قیمت</a>
         </div>
       </div>
     </section>

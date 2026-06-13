@@ -32,6 +32,9 @@
 .reviews-marquee {
   overflow: hidden;
   width: 100%;
+  /* Force LTR flow so the seamless translateX loop keeps working under the
+     page's RTL direction — the card content is set back to RTL below. */
+  direction: ltr;
   /* fade the edges so cards slide in/out softly */
   -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
           mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
@@ -58,6 +61,9 @@
   flex-shrink: 0;
   width: 340px;
   margin-right: 22px;
+  /* restore RTL for the Persian text inside each card */
+  direction: rtl;
+  text-align: right;
   background: var(--white);
   border-radius: 18px;
   padding: 28px 24px;

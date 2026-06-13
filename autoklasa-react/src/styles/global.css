@@ -9,16 +9,16 @@
   --gray-300: #d1d5db;
   --gray-100: #f3f4f6;
   --white:    #ffffff;
-  --orange:   #e85d04;
-  --orange-h: #c84d00;
-  --orange-l: #fff0e6;
+  --orange:   #c99e4d;
+  --orange-h: #b8893a;
+  --orange-l: #f7efdf;
   --gold:     #c99e4d;
 }
 
 html { scroll-behavior: smooth; }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Vazirmatn', 'Inter', sans-serif;
   color: var(--gray-700);
   background: var(--white);
   line-height: 1.6;
