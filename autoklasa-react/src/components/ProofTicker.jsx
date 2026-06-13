@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import '../styles/proofTicker.css';
 
 const StarIcon  = () => <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>;
@@ -13,10 +14,25 @@ const ITEMS = [
 ];
 
 export default function ProofTicker() {
-  const doubled = [...ITEMS, ...ITEMS];
+  const barRef   = useRef();
+  const trackRef = useRef();
+  const doubled  = [...ITEMS, ...ITEMS];
+
+  useEffect(() => {
+    const bar   = barRef.current;
+    const track = trackRef.current;
+    if (!bar || !track) return;
+    const io = new IntersectionObserver(
+      ([entry]) => { track.style.animationPlayState = entry.isIntersecting ? 'running' : 'paused'; },
+      { rootMargin: '0px' }
+    );
+    io.observe(bar);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <div className="proof-bar">
-      <div className="proof-track">
+    <div className="proof-bar" ref={barRef}>
+      <div className="proof-track" ref={trackRef}>
         {doubled.map((item, i) => (
           <span className="proof-item" key={i}>
             {item.icon}

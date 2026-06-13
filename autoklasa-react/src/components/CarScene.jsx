@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
 import { CITY_ENV } from './cityEnv';
+import { optimizeCarModel, disposeOptimized } from './optimizeCarModel';
 import '../styles/carScene.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -27,48 +28,32 @@ const BAND_RIGHT_M = 0.12, BAND_LEFT_M = 0.30;
 
 function MercedesModel({ animRef }) {
   const { scene } = useGLTF('/mercedes-_benz_w206_c220.glb');
-  const clonedScene = useMemo(() => scene.clone(true), [scene]);
   const groupRef = useRef();
   const [geom, setGeom] = useState(null);
 
-  // Wheel rolling state
-  const wheelsRef   = useRef([]);
-  const wheelRadius = useRef(1);   // model-space radius, set once geometry loads
-  const prevCarX    = useRef(null);
+  // Collapse the model's hundreds of draw calls into a few merged meshes, with
+  // the 4 wheels kept as spinnable pivots. (Mercedes glass is plain BLEND, so no
+  // transmission pass to neutralize.)
+  const { group, wheelPivots, wheelRadius } = useMemo(
+    () => optimizeCarModel(scene.clone(true), { keepWheels: true, neutralizeTransmission: false }),
+    [scene]
+  );
+
+  // Wheel rolling state (wheelPivots/wheelRadius are stable from useMemo).
+  const prevCarX = useRef(null);
+
+  // Free merged geometry buffers when this scene unmounts.
+  useEffect(() => () => disposeOptimized(group), [group]);
 
   useEffect(() => {
-    if (!clonedScene) return;
-
-    // ── find wheel meshes ──────────────────────────────────────────────────
-    const found = [];
-    clonedScene.traverse(obj => {
-      if (!obj.isMesh) return;
-      const n = obj.name;
-      // Match only when the keyword is a whole word — prevents "rim" matching inside "trim", etc.
-      if (!(/(?:^|[^a-zA-Z])(wheel|tire|tyre|rim)(?:[^a-zA-Z]|$)/i.test(n))) return;
-      // Exclude non-rotating body parts by name
-      if (/door|arch|well|fender|panel|liner|housing|trim|sill|skirt|rocker/i.test(n)) return;
-      // Exclude if any ancestor is a door object
-      for (let p = obj.parent; p; p = p.parent) {
-        if (/door/i.test(p.name)) return;
-      }
-      found.push(obj);
-    });
-    wheelsRef.current = found;
-
-    // Estimate wheel radius from the first wheel's bounding sphere (model space)
-    if (found.length > 0) {
-      const s = new THREE.Sphere();
-      new THREE.Box3().setFromObject(found[0]).getBoundingSphere(s);
-      wheelRadius.current = s.radius;
-    }
+    if (!group) return;
 
     const isMobile = window.innerWidth < 768;
     const bandTop = isMobile ? BAND_RIGHT_M : BAND_RIGHT;
     const bandLeft = isMobile ? BAND_LEFT_M : BAND_LEFT;
 
     // Measure the model in its native orientation
-    const box = new THREE.Box3().setFromObject(clonedScene);
+    const box = new THREE.Box3().setFromObject(group);
     const size = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
@@ -110,7 +95,7 @@ function MercedesModel({ animRef }) {
       bandLeft,
     });
 
-  }, [scene]);
+  }, [group]);
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
@@ -118,11 +103,11 @@ function MercedesModel({ animRef }) {
     const x = animRef.current.carX;
 
     // ── wheel rolling ──────────────────────────────────────────────────────
-    if (prevCarX.current !== null && wheelsRef.current.length > 0) {
+    if (prevCarX.current !== null && wheelPivots.length > 0) {
       const deltaX = x - prevCarX.current;
       // World distance = model distance × scale  →  angle = worldDelta / (radius × scale)
-      const angle = -deltaX / (wheelRadius.current * geom.scale);
-      wheelsRef.current.forEach(w => { w.rotation.x += angle; });
+      const angle = -deltaX / (wheelRadius * geom.scale);
+      wheelPivots.forEach(w => { w.rotation.x += angle; });
     }
     prevCarX.current = x;
 
@@ -145,7 +130,7 @@ function MercedesModel({ animRef }) {
       <group rotation={[Math.PI, 0, 0]}>
         {/* Orient to side profile + scale about the model's centre */}
         <group rotation={[0, geom.sideRotY, 0]} scale={geom.scale}>
-          <primitive object={clonedScene} position={geom.center} />
+          <primitive object={group} position={geom.center} />
         </group>
       </group>
     </group>
@@ -207,7 +192,7 @@ export default function CarScene() {
             trigger: document.documentElement,
             start: 'top top',
             end: `+=${SCROLL_RANGE}`,
-            scrub: 1,
+            scrub: 0.5,
             onUpdate: (self) => {
               invalidateRef.current?.();
               if (entrance && self.progress > 0) {
@@ -232,7 +217,7 @@ export default function CarScene() {
         <Canvas
           className="car-canvas"
           frameloop={inView ? 'demand' : 'never'}
-          dpr={[1, 2]}
+          dpr={[1, 1.5]}
           camera={{ fov: isMobile ? FOV_MOBILE : FOV, position: [0, 0, CAM_DIST] }}
           onCreated={({ camera, invalidate }) => {
             camera.position.set(0, 0, CAM_DIST);

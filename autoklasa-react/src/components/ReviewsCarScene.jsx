@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
 import { CITY_ENV } from './cityEnv';
+import { optimizeCarModel, disposeOptimized } from './optimizeCarModel';
 import '../styles/reviewsCarScene.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -17,82 +18,28 @@ const TRAVEL      = 6;                  // car drifts from +TRAVEL (right) to 0 
 
 function PorscheModel({ animRef }) {
   const { scene }       = useGLTF('/porsche911.glb');
-  const clonedScene     = useMemo(() => scene.clone(true), [scene]);
   const groupRef        = useRef();
   const [geom, setGeom] = useState(null);
 
-  // Wheel rolling state
-  const wheelsRef      = useRef([]);
-  const wheelRadius    = useRef(1);   // model-space radius, set once geometry loads
-  const prevCarX       = useRef(null);
+  // Collapse the 1664-draw-call model into a handful of merged meshes, keeping
+  // the 4 wheels as spinnable pivots and swapping the costly transmission glass
+  // for plain transparent. Done once when the GLB resolves.
+  const { group, wheelPivots, wheelRadius } = useMemo(
+    () => optimizeCarModel(scene.clone(true), { keepWheels: true, neutralizeTransmission: true }),
+    [scene]
+  );
+
+  // Wheel rolling state (wheelPivots/wheelRadius are stable from useMemo).
+  const prevCarX = useRef(null);
+
+  // Free merged geometry buffers when this scene unmounts.
+  useEffect(() => () => disposeOptimized(group), [group]);
 
   useEffect(() => {
-    if (!clonedScene) return;
+    if (!group) return;
 
-    // ── find wheel meshes ──────────────────────────────────────────────────
-    const found = [];
-    clonedScene.traverse(obj => {
-      if (!obj.isMesh) return;
-      const n = obj.name;
-      // Match only when the keyword is a whole word — prevents "rim" matching inside "trim", etc.
-      if (!(/(?:^|[^a-zA-Z])(wheel|tire|tyre|rim)(?:[^a-zA-Z]|$)/i.test(n))) return;
-      // Exclude non-rotating body parts by name (incl. brake calipers/discs)
-      if (/door|arch|well|fender|panel|liner|housing|trim|sill|skirt|rocker|call?iper|brake|disc/i.test(n)) return;
-      // Exclude if any ancestor is a door object
-      for (let p = obj.parent; p; p = p.parent) {
-        if (/door/i.test(p.name)) return;
-      }
-      found.push(obj);
-    });
-
-    // ── build one spin pivot per wheel ─────────────────────────────────────
-    // This model's wheels are a single combined node of hundreds of fragment
-    // meshes, each sitting at its own local offset around a shared hub. Spinning
-    // the fragments individually makes them fly apart and scrambles the radius.
-    // So cluster the fragments into wheels by model-space position
-    // (front/rear × left/right) and spin a single pivot centred on each hub.
-    const pivots = [];
-    let radius = 1;
-    if (found.length > 0) {
-      clonedScene.updateWorldMatrix(true, true);
-      const toModel = new THREE.Matrix4().copy(clonedScene.matrixWorld).invert();
-      const tmp     = new THREE.Vector3();
-
-      const clusters = new Map();   // "FR" | "FL" | "BR" | "BL" → { meshes, sum, n, box }
-      found.forEach(m => {
-        const box = new THREE.Box3().setFromObject(m);      // world space
-        const cWorld = box.getCenter(new THREE.Vector3());
-        const cModel = cWorld.clone().applyMatrix4(toModel);
-        const key = `${cModel.z >= 0 ? 'F' : 'B'}${cModel.x >= 0 ? 'R' : 'L'}`;
-        let c = clusters.get(key);
-        if (!c) { c = { meshes: [], sum: new THREE.Vector3(), n: 0, box: new THREE.Box3() }; clusters.set(key, c); }
-        c.meshes.push(m);
-        c.sum.add(cModel);
-        c.n++;
-        c.box.union(box);
-      });
-
-      clusters.forEach(c => {
-        const center = c.sum.multiplyScalar(1 / c.n);       // model-space wheel centre
-        const pivot  = new THREE.Group();
-        pivot.position.copy(center);
-        clonedScene.add(pivot);
-        // Reparent the wheel's fragments under the pivot, preserving world transform.
-        c.meshes.forEach(m => pivot.attach(m));
-        pivots.push(pivot);
-      });
-
-      // Wheel radius (model space) from one wheel's in-plane extent (axle = X).
-      const first = clusters.values().next().value;
-      first.box.getSize(tmp);
-      radius = Math.max(tmp.y, tmp.z) / 2 || 1;
-    }
-
-    wheelsRef.current  = pivots;
-    wheelRadius.current = radius;
-
-    // ── geometry / scale setup (unchanged) ────────────────────────────────
-    const box    = new THREE.Box3().setFromObject(clonedScene);
+    // ── geometry / scale setup ─────────────────────────────────────────────
+    const box    = new THREE.Box3().setFromObject(group);
     const size   = new THREE.Vector3();
     const center = new THREE.Vector3();
     box.getSize(size);
@@ -111,18 +58,18 @@ function PorscheModel({ animRef }) {
     const halfH      = viewH / 2;
 
     setGeom({ scale, sideRotY, center: [-center.x, -center.y, -center.z], halfHeight, halfH });
-  }, [clonedScene]);
+  }, [group]);
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
     const x = animRef.current.carX;
 
     // ── wheel rolling ──────────────────────────────────────────────────────
-    if (prevCarX.current !== null && wheelsRef.current.length > 0) {
+    if (prevCarX.current !== null && wheelPivots.length > 0) {
       const deltaX = x - prevCarX.current;
       // World distance = model distance × scale  →  angle = worldDelta / (radius × scale)
-      const angle = -deltaX / (wheelRadius.current * geom.scale);
-      wheelsRef.current.forEach(w => { w.rotation.x += angle; });
+      const angle = -deltaX / (wheelRadius * geom.scale);
+      wheelPivots.forEach(w => { w.rotation.x += angle; });
     }
     prevCarX.current = x;
 
@@ -136,7 +83,7 @@ function PorscheModel({ animRef }) {
     <group ref={groupRef}>
       <group rotation={[Math.PI, 0, 0]}>
         <group rotation={[0, geom.sideRotY, 0]} scale={geom.scale}>
-          <primitive object={clonedScene} position={geom.center} />
+          <primitive object={group} position={geom.center} />
         </group>
       </group>
     </group>
@@ -184,7 +131,7 @@ export default function ReviewsCarScene() {
             trigger: sectionRef.current,
             start: 'top 85%',
             end:   'center center',
-            scrub: 1,
+            scrub: 0.5,
             onUpdate: () => invalidateRef.current?.(),
           },
         }
@@ -199,7 +146,7 @@ export default function ReviewsCarScene() {
       <Canvas
         className="reviews-car-canvas"
         frameloop={inView ? 'demand' : 'never'}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         camera={{ fov: FOV, position: [0, 0, CAM_DIST] }}
         onCreated={({ camera, invalidate }) => {
           camera.position.set(0, 0, CAM_DIST);

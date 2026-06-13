@@ -14,6 +14,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  will-change: clip-path;
   background: #000;
   clip-path: polygon(0% 94%, 100% 8%, 100% 101%, 0% 101%);
   z-index: 0;

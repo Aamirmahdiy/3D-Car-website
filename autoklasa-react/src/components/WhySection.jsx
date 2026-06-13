@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import * as THREE from 'three';
 import { CITY_ENV } from './cityEnv';
+import { optimizeCarModel, disposeOptimized } from './optimizeCarModel';
 import '../styles/whySection.css';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -42,14 +43,24 @@ function computeTravel(zScale) {
 
 function TopCarModel({ animRef }) {
   const { scene } = useGLTF('/porsche911.glb');
-  const clonedScene = useMemo(() => scene.clone(true), [scene]);
   const groupRef  = useRef();
   const [geom, setGeom] = useState(null);
 
-  useEffect(() => {
-    if (!clonedScene) return;
+  // Top-down view never rolls the wheels, so merge everything (wheels included)
+  // by material for the maximum draw-call collapse, and drop the costly
+  // transmission glass.
+  const { group } = useMemo(
+    () => optimizeCarModel(scene.clone(true), { keepWheels: false, neutralizeTransmission: true }),
+    [scene]
+  );
 
-    const box  = new THREE.Box3().setFromObject(clonedScene);
+  // Free merged geometry buffers when this scene unmounts.
+  useEffect(() => () => disposeOptimized(group), [group]);
+
+  useEffect(() => {
+    if (!group) return;
+
+    const box  = new THREE.Box3().setFromObject(group);
     const size = new THREE.Vector3();
     const cent = new THREE.Vector3();
     box.getSize(size);
@@ -71,7 +82,7 @@ function TopCarModel({ animRef }) {
     const scale   = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
 
     setGeom({ scale, rotY, center: [-cent.x, -cent.y, -cent.z] });
-  }, [clonedScene]);
+  }, [group]);
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
@@ -86,7 +97,7 @@ function TopCarModel({ animRef }) {
     <group ref={groupRef}>
       {/* Right-side up, viewed from above — no flip */}
       <group rotation={[0, geom.rotY, 0]} scale={geom.scale}>
-        <primitive object={clonedScene} position={geom.center} />
+        <primitive object={group} position={geom.center} />
       </group>
     </group>
   );
@@ -140,7 +151,7 @@ export default function WhySection() {
           trigger: sectionRef.current,
           start: 'top 57%',
           end:   'center center',
-          scrub: 1,
+          scrub: 0.5,
           onUpdate: () => invalidateRef.current?.(),
         },
       });
@@ -158,7 +169,7 @@ export default function WhySection() {
       <Canvas
         className="why-canvas"
         frameloop={inView ? 'demand' : 'never'}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         camera={{ fov: FOV_WHY, position: [0, CAM_Y, CAM_Z] }}
         onCreated={({ camera, invalidate }) => {
           camera.position.set(0, CAM_Y, CAM_Z);

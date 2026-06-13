@@ -4,7 +4,7 @@ export default function Hero() {
   return (
     <section className="hero">
       <div className="hero-content">
-        <h1>خرید خودرو. <em>آنلاین.</em></h1>
+        <h1>خرید خودرو <em>آنلاین.</em></h1>
 
         <p>با ما در وقت و انرژی خود صرفه‌جویی می‌کنید. خودتان دنبال خودرو نگردید، آن را به دست متخصصان بسپارید.</p>
 

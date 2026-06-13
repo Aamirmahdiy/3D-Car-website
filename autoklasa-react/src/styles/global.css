@@ -15,7 +15,7 @@
   --gold:     #c99e4d;
 }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: auto; }
 
 body {
   font-family: 'Vazirmatn', 'Inter', sans-serif;

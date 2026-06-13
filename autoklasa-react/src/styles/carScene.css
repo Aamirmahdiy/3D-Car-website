@@ -28,6 +28,7 @@
   inset: 0;
   z-index: 2;
   pointer-events: none;
+  will-change: clip-path;
   /* Boundary: 16% on the right edge → 40% on the left edge */
   clip-path: polygon(0 0, 100% 0, 100% 16%, 0 40%);
   background: linear-gradient(

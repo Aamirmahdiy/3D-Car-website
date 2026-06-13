@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import '../styles/reviews.css';
 
 const GoogleG = ({ size = 14 }) => (
@@ -17,8 +18,23 @@ const REVIEWS = [
 ];
 
 export default function Reviews() {
+  const sectionRef = useRef();
+  const trackRef   = useRef();
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    const track   = trackRef.current;
+    if (!section || !track) return;
+    const io = new IntersectionObserver(
+      ([entry]) => { track.style.animationPlayState = entry.isIntersecting ? 'running' : 'paused'; },
+      { rootMargin: '0px' }
+    );
+    io.observe(section);
+    return () => io.disconnect();
+  }, []);
+
   return (
-    <section className="reviews">
+    <section className="reviews" ref={sectionRef}>
       <div className="section-inner">
         <div className="reviews-header">
           <h2 className="section-title" style={{ marginBottom: 0 }}>
@@ -27,7 +43,7 @@ export default function Reviews() {
         </div>
 
         <div className="reviews-marquee">
-          <div className="reviews-track">
+          <div className="reviews-track" ref={trackRef}>
             {[...REVIEWS, ...REVIEWS].map((r, i) => (
               <div className="review-card" key={i} aria-hidden={i >= REVIEWS.length}>
                 <div className="review-top">
