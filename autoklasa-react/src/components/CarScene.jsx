@@ -1,5 +1,5 @@
 import { Suspense, useRef, useEffect, useState, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useGLTF, Environment } from '@react-three/drei';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -18,18 +18,40 @@ const FOV_MOBILE = 50;
 const COVERAGE = 0.62;        // car width as fraction of viewport width (desktop)
 const COVERAGE_MOBILE = 0.82;
 const TRAVEL = 6;             // car drifts from +TRAVEL (right) to -TRAVEL (left)
+const ENTRANCE_TRAVEL = 14.5;   // entrance starts here — past the right viewport edge
 const FLIP_FACING = true;     // true → nose leads the direction of travel (left)
 const HANG = 1.1;             // how far below the band the car hangs (×half-height)
 const LINE_OFFSET = 0;        // extra vertical nudge in world units
+const ENTRANCE_DURATION = 2.0;   // seconds — slow, graceful sweep-in
+const SCROLL_RANGE_VH = 1.4;     // scroll distance (×viewport height) that maps carX 0 → -TRAVEL
+
+// Gentle slow-in / slow-out: no sudden velocity at either end, so there's
+// nothing for a dropped frame to judder against.
+const easeInOutCubic = p => (p < 0.5 ? 4 * p * p * p : 1 - ((-2 * p + 2) ** 3) / 2);
 
 /* Band edge top-fractions — MUST match the clip-path in carScene.css */
 const BAND_RIGHT = 0.16, BAND_LEFT = 0.40;
 const BAND_RIGHT_M = 0.12, BAND_LEFT_M = 0.30;
 
-function MercedesModel({ animRef }) {
+function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, measureRef, onEntranceDone }) {
   const { scene } = useGLTF('/mercedes-_benz_w206_c220.glb');
   const groupRef = useRef();
   const [geom, setGeom] = useState(null);
+
+  // R3F renderer/scene/camera for the one-shot GPU warm-up before the sweep.
+  const gl = useThree(s => s.gl);
+  const r3fScene = useThree(s => s.scene);
+  const camera = useThree(s => s.camera);
+
+  // Expose a warm-up that synchronously links shaders + processes the
+  // environment (the expensive, blocking part of the first render). We don't
+  // present a frame here — that's left to the first "always"-loop render, which
+  // draws the car correctly off-screen at carX=TRAVEL before the tween starts,
+  // so the compile hitch lands on a stationary frame with no positional flash.
+  useEffect(() => {
+    warmupRef.current = () => { gl.compile(r3fScene, camera); };
+    return () => { warmupRef.current = null; };
+  }, [gl, r3fScene, camera, warmupRef]);
 
   // Collapse the model's hundreds of draw calls into a few merged meshes, with
   // the 4 wheels kept as spinnable pivots. (Mercedes glass is plain BLEND, so no
@@ -45,60 +67,105 @@ function MercedesModel({ animRef }) {
   // Free merged geometry buffers when this scene unmounts.
   useEffect(() => () => disposeOptimized(group), [group]);
 
+  // Measure the model + viewport into `geom`. Re-run on resize (via measureRef,
+  // owned by the parent) so the car stays sized and aligned to the band after a
+  // window resize or device rotation.
   useEffect(() => {
     if (!group) return;
 
-    const isMobile = window.innerWidth < 768;
-    const bandTop = isMobile ? BAND_RIGHT_M : BAND_RIGHT;
-    const bandLeft = isMobile ? BAND_LEFT_M : BAND_LEFT;
+    const measure = () => {
+      const isMobile = window.innerWidth < 768;
+      const bandTop = isMobile ? BAND_RIGHT_M : BAND_RIGHT;
+      const bandLeft = isMobile ? BAND_LEFT_M : BAND_LEFT;
 
-    // Measure the model in its native orientation
-    const box = new THREE.Box3().setFromObject(group);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
+      // Measure the model in its native orientation
+      const box = new THREE.Box3().setFromObject(group);
+      const size = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
 
-    // A car is longest along its driving axis. Rotate so length lands on
-    // world X (screen horizontal) for a clean side profile.
-    let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
-    if (FLIP_FACING) sideRotY += Math.PI;
+      // A car is longest along its driving axis. Rotate so length lands on
+      // world X (screen horizontal) for a clean side profile.
+      let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
+      if (FLIP_FACING) sideRotY += Math.PI;
 
-    const carLength = Math.max(size.x, size.z);
+      const carLength = Math.max(size.x, size.z);
 
-    // Viewport in world units at the z=0 plane
-    const fovV = ((isMobile ? FOV_MOBILE : FOV) * Math.PI) / 180;
-    const aspect = window.innerWidth / window.innerHeight;
-    const viewH = 2 * CAM_DIST * Math.tan(fovV / 2);
-    const viewW = viewH * aspect;
+      // Viewport in world units at the z=0 plane
+      const fovV = ((isMobile ? FOV_MOBILE : FOV) * Math.PI) / 180;
+      const aspect = window.innerWidth / window.innerHeight;
+      const viewH = 2 * CAM_DIST * Math.tan(fovV / 2);
+      const viewW = viewH * aspect;
 
-    // Auto-scale: fit car to COVERAGE of the viewport width
-    const coverage = isMobile ? COVERAGE_MOBILE : COVERAGE;
-    const scale = carLength > 0 ? (viewW * coverage) / carLength : 1;
+      // Auto-scale: fit car to COVERAGE of the viewport width
+      const coverage = isMobile ? COVERAGE_MOBILE : COVERAGE;
+      const scale = carLength > 0 ? (viewW * coverage) / carLength : 1;
 
-    // Tilt the car so its long axis lies along the band line.
-    // Line drops toward the left → positive slope in world Y per world X.
-    const slope = (bandLeft - bandTop) / aspect;
-    const tilt = Math.atan(slope);
+      // Tilt the car so its long axis lies along the band line.
+      // Line drops toward the left → positive slope in world Y per world X.
+      const slope = (bandLeft - bandTop) / aspect;
+      const tilt = Math.atan(slope);
 
-    setGeom({
-      scale,
-      sideRotY,
-      tilt,
-      center: [-center.x, -center.y, -center.z],
-      halfHeight: (size.y * scale) / 2,
-      viewH,
-      viewW,
-      halfW: viewW / 2,
-      halfH: viewH / 2,
-      bandTop,
-      bandLeft,
-    });
+      // Sync the Three.js Box3 measurement into state; runs on mount + resize.
+      setGeom({
+        scale,
+        sideRotY,
+        tilt,
+        center: [-center.x, -center.y, -center.z],
+        halfHeight: (size.y * scale) / 2,
+        viewH,
+        viewW,
+        halfW: viewW / 2,
+        halfH: viewH / 2,
+        bandTop,
+        bandLeft,
+      });
+    };
 
-  }, [group]);
+    measureRef.current = measure;
+    measure();
+    return () => { measureRef.current = null; };
+  }, [group, measureRef]);
 
-  useFrame(() => {
+  // Once geom is set the <primitive> is committed to the scene graph, so the
+  // car's materials/buffers exist for the warm-up to compile. Kick off the
+  // sweep-in here (not in the measure effect, where the primitive isn't mounted
+  // yet). carX is still TRAVEL, so the first rendered frame sits off-screen.
+  useEffect(() => {
+    if (!geom) return;
+    startEntranceRef.current?.();
+  }, [geom, startEntranceRef]);
+
+  useFrame((_, delta) => {
     if (!groupRef.current || !geom) return;
+
+    // ── entrance sweep, driven on R3F's own clock ──────────────────────────
+    // Advancing carX here (instead of via a GSAP tween on a separate ticker)
+    // keeps motion and rendering on one clock, so the sweep can't micro-judder.
+    const e = entranceRef.current;
+    if (e.active) {
+      e.elapsed += Math.min(delta, 0.05);   // clamp: ignore a long first/stall frame
+      const p = Math.min(e.elapsed / ENTRANCE_DURATION, 1);
+
+      // Rest position the sweep eases into: 0 if the user hasn't scrolled,
+      // otherwise the live scroll-mapped carX. Smoothed so a fast scroll can't
+      // snap the car. With no scroll this stays 0 → a plain centre sweep.
+      const range = window.innerHeight * SCROLL_RANGE_VH;
+      const liveTarget = -TRAVEL * Math.min(Math.max(window.scrollY / range, 0), 1);
+      e.target += (liveTarget - e.target) * Math.min(1, delta * 8);
+
+      // One continuous eased move from off-screen to that rest position, so a
+      // scroll mid-sweep flows the car through centre to the scroll spot with no
+      // dead stop in the middle.
+      animRef.current.carX = ENTRANCE_TRAVEL + (e.target - ENTRANCE_TRAVEL) * easeInOutCubic(p);
+
+      if (p >= 1) {
+        e.active = false;
+        animRef.current.carX = e.target;
+        onEntranceDone();
+      }
+    }
 
     const x = animRef.current.carX;
 
@@ -147,8 +214,29 @@ export default function CarScene() {
   const animRef = useRef({ carX: TRAVEL });
   // Scoped render trigger for this canvas (frameloop="demand").
   const invalidateRef = useRef(null);
+  // The R3F camera, captured on create — so a resize can refresh its FOV.
+  const cameraRef = useRef(null);
+  // Re-measure handle, set by MercedesModel; called on resize.
+  const measureRef = useRef(null);
   // Whether the scene is on screen — gates the render loop entirely.
   const [inView, setInView] = useState(true);
+  // While the sweep-in plays, render in "always" so the per-frame useFrame step
+  // runs at a steady cadence. Drops back to "demand" the moment it finishes.
+  const [entranceActive, setEntranceActive] = useState(false);
+  // Entrance progress, advanced inside useFrame on R3F's clock. `target` is the
+  // (smoothed) carX the sweep eases into — 0, or the scroll position if scrolled.
+  const entranceRef = useRef({ active: false, elapsed: 0, target: 0 });
+  // Guards against the entrance restarting (e.g. hot reload re-running effects).
+  const entranceStartedRef = useRef(false);
+  // Called by MercedesModel once its geometry is ready; starts the sweep-in.
+  const startEntranceRef = useRef(null);
+  // Warm-up handle set by MercedesModel: compiles shaders + uploads buffers on a
+  // stationary frame so the first visible motion frame is already warm.
+  const warmupRef = useRef(null);
+  // Deferred scroll trigger — created only after the entrance completes so the
+  // two animations can never fight over carX.
+  const scrollCtxRef = useRef(null);
+  const createScrollTriggerRef = useRef(null);
 
   // Pause rendering completely while the section is scrolled out of view.
   useEffect(() => {
@@ -165,49 +253,73 @@ export default function CarScene() {
     return () => io.disconnect();
   }, []);
 
+  // Re-measure framing on resize / rotation. R3F already keeps the camera aspect
+  // in sync; we only need to refresh the FOV (mobile breakpoint) + the car framing.
+  useEffect(() => {
+    let t;
+    const onResize = () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        if (cameraRef.current) {
+          cameraRef.current.fov = window.innerWidth < 768 ? FOV_MOBILE : FOV;
+          cameraRef.current.updateProjectionMatrix();
+        }
+        measureRef.current?.();
+        invalidateRef.current?.();
+        ScrollTrigger.refresh();
+      }, 150);
+    };
+    window.addEventListener('resize', onResize);
+    return () => { clearTimeout(t); window.removeEventListener('resize', onResize); };
+  }, []);
+
   useEffect(() => {
     const anim = animRef.current;
-    anim.carX = TRAVEL;
+    const entrance = entranceRef.current;   // captured for the cleanup closure
+    anim.carX = ENTRANCE_TRAVEL;
 
-    const SCROLL_RANGE = window.innerHeight * 1.4;
+    const SCROLL_RANGE = window.innerHeight * SCROLL_RANGE_VH;
 
-    // Entrance: car sweeps right → centre on page load (before any scroll)
-    let entrance = gsap.to(anim, {
-      carX: 0,
-      duration: 1.4,
-      ease: 'power3.out',
-      delay: 0.3,
-      onUpdate: () => invalidateRef.current?.(),
-    });
-
-    // Scroll: drive carX 0 → -TRAVEL with smooth scrub (mirrors WhySection approach)
-    const ctx = gsap.context(() => {
-      gsap.fromTo(anim,
-        { carX: 0 },
-        {
-          carX: -TRAVEL,
-          ease: 'none',
-          immediateRender: false,
-          scrollTrigger: {
-            trigger: document.documentElement,
-            start: 'top top',
-            end: `+=${SCROLL_RANGE}`,
-            scrub: 0.5,
-            onUpdate: (self) => {
-              invalidateRef.current?.();
-              if (entrance && self.progress > 0) {
-                entrance.kill();
-                entrance = null;
-              }
+    // Scroll trigger — created only after the entrance completes (called from
+    // onEntranceDone) so it can never override carX while the car is still moving in.
+    createScrollTriggerRef.current = () => {
+      if (scrollCtxRef.current) return;
+      scrollCtxRef.current = gsap.context(() => {
+        gsap.fromTo(anim,
+          { carX: 0 },
+          {
+            carX: -TRAVEL,
+            ease: 'none',
+            immediateRender: false,
+            scrollTrigger: {
+              trigger: document.documentElement,
+              start: 'top top',
+              end: `+=${SCROLL_RANGE}`,
+              scrub: 0.5,
+              onUpdate: () => invalidateRef.current?.(),
             },
-          },
-        }
-      );
-    });
+          }
+        );
+      });
+    };
+
+    // Entrance: called by MercedesModel once the GLB geometry is ready.
+    startEntranceRef.current = () => {
+      if (entranceStartedRef.current) return;
+      entranceStartedRef.current = true;
+      warmupRef.current?.();
+      entrance.elapsed = 0;
+      entrance.target = 0;
+      entrance.active = true;
+      setEntranceActive(true);
+    };
 
     return () => {
-      entrance?.kill();
-      ctx.revert();
+      startEntranceRef.current = null;
+      createScrollTriggerRef.current = null;
+      entrance.active = false;
+      scrollCtxRef.current?.revert();
+      scrollCtxRef.current = null;
     };
   }, []);
 
@@ -216,13 +328,14 @@ export default function CarScene() {
       <div className="car-scene-sticky">
         <Canvas
           className="car-canvas"
-          frameloop={inView ? 'demand' : 'never'}
+          frameloop={inView ? (entranceActive ? 'always' : 'demand') : 'never'}
           dpr={[1, 1.5]}
           camera={{ fov: isMobile ? FOV_MOBILE : FOV, position: [0, 0, CAM_DIST] }}
           onCreated={({ camera, invalidate }) => {
             camera.position.set(0, 0, CAM_DIST);
             camera.lookAt(0, 0, 0);
             invalidateRef.current = invalidate;
+            cameraRef.current = camera;
           }}
           gl={{ antialias: !isMobile, powerPreference: 'high-performance' }}
         >
@@ -231,7 +344,17 @@ export default function CarScene() {
           <Environment files={CITY_ENV} background={false} />
 
           <Suspense fallback={null}>
-            <MercedesModel animRef={animRef} />
+            <MercedesModel
+              animRef={animRef}
+              entranceRef={entranceRef}
+              startEntranceRef={startEntranceRef}
+              warmupRef={warmupRef}
+              measureRef={measureRef}
+              onEntranceDone={() => {
+                setEntranceActive(false);
+                createScrollTriggerRef.current?.();
+              }}
+            />
           </Suspense>
         </Canvas>
 

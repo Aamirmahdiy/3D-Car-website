@@ -16,7 +16,7 @@ const COVERAGE    = 1;
 const FLIP_FACING = true;
 const TRAVEL      = 6;                  // car drifts from +TRAVEL (right) to 0 (centre)
 
-function PorscheModel({ animRef }) {
+function PorscheModel({ animRef, measureRef }) {
   const { scene }       = useGLTF('/porsche911.glb');
   const groupRef        = useRef();
   const [geom, setGeom] = useState(null);
@@ -35,30 +35,40 @@ function PorscheModel({ animRef }) {
   // Free merged geometry buffers when this scene unmounts.
   useEffect(() => () => disposeOptimized(group), [group]);
 
+  // Measure framing from the merged group + current viewport. Re-run on resize
+  // (via measureRef, owned by the parent) so the car stays correctly framed
+  // after a window resize or device rotation.
   useEffect(() => {
     if (!group) return;
 
-    // ── geometry / scale setup ─────────────────────────────────────────────
-    const box    = new THREE.Box3().setFromObject(group);
-    const size   = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
+    const measure = () => {
+      // ── geometry / scale setup ───────────────────────────────────────────
+      const box    = new THREE.Box3().setFromObject(group);
+      const size   = new THREE.Vector3();
+      const center = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(center);
 
-    let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
-    if (FLIP_FACING) sideRotY += Math.PI;
+      let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
+      if (FLIP_FACING) sideRotY += Math.PI;
 
-    const fovV       = (FOV * Math.PI) / 180;
-    const aspect     = window.innerWidth / window.innerHeight;
-    const viewH      = 2 * CAM_DIST * Math.tan(fovV / 2);
-    const viewW      = viewH * aspect;
-    const carLen     = Math.max(size.x, size.z);
-    const scale      = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
-    const halfHeight = (size.y * scale) / 2;
-    const halfH      = viewH / 2;
+      const fovV       = (FOV * Math.PI) / 180;
+      const aspect     = window.innerWidth / window.innerHeight;
+      const viewH      = 2 * CAM_DIST * Math.tan(fovV / 2);
+      const viewW      = viewH * aspect;
+      const carLen     = Math.max(size.x, size.z);
+      const scale      = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
+      const halfHeight = (size.y * scale) / 2;
+      const halfH      = viewH / 2;
 
-    setGeom({ scale, sideRotY, center: [-center.x, -center.y, -center.z], halfHeight, halfH });
-  }, [group]);
+      // Sync the Three.js Box3 measurement into state; runs on mount + resize.
+      setGeom({ scale, sideRotY, center: [-center.x, -center.y, -center.z], halfHeight, halfH });
+    };
+
+    measureRef.current = measure;
+    measure();
+    return () => { measureRef.current = null; };
+  }, [group, measureRef]);
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
@@ -98,6 +108,8 @@ export default function ReviewsCarScene() {
   const animRef    = useRef({ carX: TRAVEL });
   // Scoped render trigger for this canvas (frameloop="demand").
   const invalidateRef = useRef(null);
+  // Re-measure handle, set by PorscheModel; called on resize.
+  const measureRef = useRef(null);
   // Whether the scene is on screen — gates the render loop entirely.
   const [inView, setInView] = useState(true);
 
@@ -114,6 +126,21 @@ export default function ReviewsCarScene() {
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // Re-measure framing on resize / rotation so the car stays correctly framed.
+  useEffect(() => {
+    let t;
+    const onResize = () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        measureRef.current?.();
+        invalidateRef.current?.();
+        ScrollTrigger.refresh();
+      }, 150);
+    };
+    window.addEventListener('resize', onResize);
+    return () => { clearTimeout(t); window.removeEventListener('resize', onResize); };
   }, []);
 
   useEffect(() => {
@@ -161,7 +188,7 @@ export default function ReviewsCarScene() {
         <Environment files={CITY_ENV} background={false} />
 
         <Suspense fallback={null}>
-          <PorscheModel animRef={animRef} />
+          <PorscheModel animRef={animRef} measureRef={measureRef} />
         </Suspense>
       </Canvas>
     </div>

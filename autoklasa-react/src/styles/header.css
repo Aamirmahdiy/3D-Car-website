@@ -1,3 +1,8 @@
+@keyframes nav-item-in {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 header {
   position: sticky;
   top: 0;
@@ -42,7 +47,7 @@ header {
 }
 .logo-text span { color: var(--orange); }
 
-nav { display: flex; align-items: center; gap: 6px; }
+nav { display: flex; align-items: center; gap: 6px; overflow: hidden; }
 
 nav a {
   padding: 8px 14px;
@@ -52,7 +57,16 @@ nav a {
   border-radius: 6px;
   transition: color .2s, background .2s;
   white-space: nowrap;
+  opacity: 0;
+  animation: nav-item-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
+nav a:nth-child(1) { animation-delay: 0.40s; }
+nav a:nth-child(2) { animation-delay: 0.48s; }
+nav a:nth-child(3) { animation-delay: 0.56s; }
+nav a:nth-child(4) { animation-delay: 0.64s; }
+nav a:nth-child(5) { animation-delay: 0.72s; }
+nav a:nth-child(6) { animation-delay: 0.80s; }
+
 nav a:hover { color: var(--white); background: #1e1e1e; }
 
 .btn-nav {
@@ -79,6 +93,8 @@ nav a:hover { color: var(--white); background: #1e1e1e; }
   padding: 6px;
   background: none;
   border: none;
+  opacity: 0;
+  animation: nav-item-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.40s forwards;
 }
 .hamburger span {
   width: 24px;

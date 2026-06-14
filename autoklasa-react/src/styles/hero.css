@@ -86,6 +86,20 @@
   flex-wrap: wrap;
 }
 
+/* Buttons rise up + fade in on load. The animation lives on a wrapper so each
+   button keeps its own transform free for the hover lift. */
+@keyframes hero-rise-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-rise {
+  display: inline-flex;
+  opacity: 0;
+  animation: hero-rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.hero-rise-1 { animation-delay: 0.50s; }
+.hero-rise-2 { animation-delay: 0.62s; }
+
 .btn-hero-outline {
   display: inline-flex;
   align-items: center;

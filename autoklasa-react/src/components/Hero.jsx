@@ -15,8 +15,8 @@ export default function Hero() {
         </div>
 
         <div className="hero-actions">
-          <a href="#" className="btn-hero-outline">مشاهده خدمات</a>
-          <a href="#" className="btn-hero-gold">درخواست قیمت</a>
+          <span className="hero-rise hero-rise-1"><a href="#" className="btn-hero-outline">مشاهده خدمات</a></span>
+          <span className="hero-rise hero-rise-2"><a href="#" className="btn-hero-gold">درخواست قیمت</a></span>
         </div>
       </div>
     </section>

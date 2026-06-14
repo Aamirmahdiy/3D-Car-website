@@ -1,4 +1,4 @@
-# Autoklasa — Car Import Landing Page
+# mashinekhoob — Car Import Landing Page
 
 A Persian-language single-page marketing site for a car import/brokerage service. Built with React 19, Three.js (via `@react-three/fiber`), and GSAP ScrollTrigger. Three interactive 3D car models animate in sync with scroll position.
 

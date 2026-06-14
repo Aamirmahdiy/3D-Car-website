@@ -41,7 +41,7 @@ function computeTravel(zScale) {
   return (camMag * A) / (1 + (CAM_Z / camMag) * zScale * A);
 }
 
-function TopCarModel({ animRef }) {
+function TopCarModel({ animRef, measureRef }) {
   const { scene } = useGLTF('/porsche911.glb');
   const groupRef  = useRef();
   const [geom, setGeom] = useState(null);
@@ -57,32 +57,42 @@ function TopCarModel({ animRef }) {
   // Free merged geometry buffers when this scene unmounts.
   useEffect(() => () => disposeOptimized(group), [group]);
 
+  // Measure framing from the merged group + current viewport. Re-run on resize
+  // (via measureRef, owned by the parent) so the car stays correctly
+  // sized/aligned after a window resize or device rotation.
   useEffect(() => {
     if (!group) return;
 
-    const box  = new THREE.Box3().setFromObject(group);
-    const size = new THREE.Vector3();
-    const cent = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(cent);
+    const measure = () => {
+      const box  = new THREE.Box3().setFromObject(group);
+      const size = new THREE.Vector3();
+      const cent = new THREE.Vector3();
+      box.getSize(size);
+      box.getCenter(cent);
 
-    // diagRot = atan(zScale): car nose faces the travel direction (-X, +|zScale|*Z)
-    const zScale   = animRef.current.zScale;
-    const diagRot  = Math.atan(zScale);
-    const baseRotY = size.z > size.x ? Math.PI / 2 : 0;
-    const rotY     = -(baseRotY + diagRot);
+      // diagRot = atan(zScale): car nose faces the travel direction (-X, +|zScale|*Z)
+      const zScale   = animRef.current.zScale;
+      const diagRot  = Math.atan(zScale);
+      const baseRotY = size.z > size.x ? Math.PI / 2 : 0;
+      const rotY     = -(baseRotY + diagRot);
 
-    // Auto-scale: car occupies COVERAGE fraction of viewport width
-    const aspect  = window.innerWidth / window.innerHeight;
-    const fovV    = (FOV_WHY * Math.PI) / 180;
-    const camDist = Math.sqrt(CAM_Y ** 2 + CAM_Z ** 2);
-    const hFov    = 2 * Math.atan(Math.tan(fovV / 2) * aspect);
-    const viewW   = 2 * camDist * Math.tan(hFov / 2);
-    const carLen  = Math.max(size.x, size.z);
-    const scale   = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
+      // Auto-scale: car occupies COVERAGE fraction of viewport width
+      const aspect  = window.innerWidth / window.innerHeight;
+      const fovV    = (FOV_WHY * Math.PI) / 180;
+      const camDist = Math.sqrt(CAM_Y ** 2 + CAM_Z ** 2);
+      const hFov    = 2 * Math.atan(Math.tan(fovV / 2) * aspect);
+      const viewW   = 2 * camDist * Math.tan(hFov / 2);
+      const carLen  = Math.max(size.x, size.z);
+      const scale   = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
 
-    setGeom({ scale, rotY, center: [-cent.x, -cent.y, -cent.z] });
-  }, [group]);
+      // Sync the Three.js Box3 measurement into state; runs on mount + resize.
+      setGeom({ scale, rotY, center: [-cent.x, -cent.y, -cent.z] });
+    };
+
+    measureRef.current = measure;
+    measure();
+    return () => { measureRef.current = null; };
+  }, [group, animRef, measureRef]);
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
@@ -110,6 +120,8 @@ export default function WhySection() {
   const animRef    = useRef({ carX: computeTravel(_z0), zScale: _z0 });
   // Scoped render trigger for this canvas (frameloop="demand").
   const invalidateRef = useRef(null);
+  // Re-measure handle, set by TopCarModel; called on resize.
+  const measureRef = useRef(null);
   // Whether the scene is on screen — gates the render loop entirely.
   const [inView, setInView] = useState(true);
 
@@ -128,14 +140,22 @@ export default function WhySection() {
     return () => io.disconnect();
   }, []);
 
-  // Keep zScale in sync with window size so useFrame always has the right slope
+  // Keep zScale AND the car framing (scale/rotation) in sync with window size so
+  // a resize or device rotation doesn't leave the car mis-sized or off the diagonal.
   useEffect(() => {
+    let t;
     const onResize = () => {
-      animRef.current.zScale = computeZScale();
-      invalidateRef.current?.();
+      clearTimeout(t);
+      t = setTimeout(() => {
+        animRef.current.zScale = computeZScale();
+        measureRef.current?.();          // recompute scale + diagonal rotation
+        animRef.current.carX = computeTravel(animRef.current.zScale);
+        invalidateRef.current?.();
+        ScrollTrigger.refresh();
+      }, 150);
     };
     window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    return () => { clearTimeout(t); window.removeEventListener('resize', onResize); };
   }, []);
 
   useEffect(() => {
@@ -179,11 +199,11 @@ export default function WhySection() {
         gl={{ antialias: !isMobile, alpha: true, powerPreference: 'high-performance' }}
       >
         <ambientLight intensity={2} />
-        <directionalLight position={[5, 10, 5]} intensity={3} castShadow />
+        <directionalLight position={[5, 10, 5]} intensity={3} />
         <Environment files={CITY_ENV} background={false} />
 
         <Suspense fallback={null}>
-          <TopCarModel animRef={animRef} />
+          <TopCarModel animRef={animRef} measureRef={measureRef} />
         </Suspense>
       </Canvas>
 
