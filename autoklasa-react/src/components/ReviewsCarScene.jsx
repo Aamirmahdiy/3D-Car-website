@@ -26,6 +26,9 @@ const WHEEL_FRAC_MOBILE = 0.03;
 // on (no tilt), so this maps a screen fraction to a world Y exactly. Using the
 // car's depth (not z=0) is what makes "wheels on the line" land precisely.
 const FRUSTUM_HALF_AT_CAR = (CAM_DIST - Z_CAR) * Math.tan(((FOV * Math.PI) / 180) / 2);
+// Mobile: how fast carX eases toward the live scroll position. Higher = snappier,
+// lower = smoother. The easing damps scroll-position jitter so the car can't dart.
+const SCROLL_SMOOTH = 10;
 
 function PorscheModel({ animRef, measureRef, sectionRef, isMobile }) {
   const { scene }       = useGLTF('/porsche911.glb');
@@ -46,43 +49,58 @@ function PorscheModel({ animRef, measureRef, sectionRef, isMobile }) {
   // Free merged geometry buffers when this scene unmounts.
   useEffect(() => () => disposeOptimized(group), [group]);
 
-  // Measure framing from the merged group + current viewport. Re-run on resize
-  // (via measureRef, owned by the parent) so the car stays correctly framed
+  // Static, transform-independent model metrics — measured ONCE while `group` is
+  // still detached (identity world matrix), so the box is the car's NATIVE size.
+  // Re-measuring this on each resize is the bug it replaces: once <primitive> is
+  // mounted inside the rotation/scale wrapper groups, setFromObject(group) returns
+  // the box of the already-rotated/scaled car — swapped X/Z extents flip
+  // `size.z > size.x` (→ wrong sideRotY, car turns to face front) and the inflated
+  // length corrupts the scale. `group` is stable (useMemo), so this never re-runs.
+  const modelMetrics = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(group);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
+    if (FLIP_FACING) sideRotY += Math.PI;
+    return {
+      sizeY: size.y,
+      carLength: Math.max(size.x, size.z),
+      sideRotY,
+      center: [-center.x, -center.y, -center.z],
+    };
+  }, [group]);
+
+  // Measure framing from the cached model metrics + current viewport. Re-run on
+  // resize (via measureRef, owned by the parent) so the car stays correctly framed
   // after a window resize or device rotation.
   useEffect(() => {
     if (!group) return;
 
     const measure = () => {
-      // ── geometry / scale setup ───────────────────────────────────────────
-      const box    = new THREE.Box3().setFromObject(group);
-      const size   = new THREE.Vector3();
-      const center = new THREE.Vector3();
-      box.getSize(size);
-      box.getCenter(center);
-
-      let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
-      if (FLIP_FACING) sideRotY += Math.PI;
+      // Native model metrics measured once (never the mounted/transformed box).
+      const { sizeY, carLength, sideRotY, center } = modelMetrics;
 
       const fovV       = (FOV * Math.PI) / 180;
       const aspect     = window.innerWidth / window.innerHeight;
       const viewH      = 2 * CAM_DIST * Math.tan(fovV / 2);
       const viewW      = viewH * aspect;
-      const carLen     = Math.max(size.x, size.z);
       const coverage   = window.innerWidth < 768 ? COVERAGE_MOBILE : COVERAGE;
-      const scale      = carLen > 0 ? (viewW * coverage) / carLen : 1;
-      const halfHeight = (size.y * scale) / 2;
+      const scale      = carLength > 0 ? (viewW * coverage) / carLength : 1;
+      const halfHeight = (sizeY * scale) / 2;
       const halfH      = viewH / 2;
 
-      // Sync the Three.js Box3 measurement into state; runs on mount + resize.
-      setGeom({ scale, sideRotY, center: [-center.x, -center.y, -center.z], halfHeight, halfH });
+      // Sync framing into state; runs on mount + resize.
+      setGeom({ scale, sideRotY, center, halfHeight, halfH });
     };
 
     measureRef.current = measure;
     measure();
     return () => { measureRef.current = null; };
-  }, [group, measureRef]);
+  }, [group, measureRef, modelMetrics]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current || !geom) return;
 
     // Mobile: frameloop is always-on, so derive carX from scroll here every frame
@@ -96,7 +114,10 @@ function PorscheModel({ animRef, measureRef, sectionRef, isMobile }) {
       const denom = 0.10 * vh + rect.height / 2;
       const p     = denom > 0 ? Math.min(1, Math.max(0, (0.60 * vh - rect.top) / denom)) : 0;
       const eased = 1 - (1 - p) ** 3;        // power3.out, matching the desktop tween
-      animRef.current.carX = TRAVEL * (1 - eased);
+      // Ease toward the scroll target instead of snapping to it, so scroll jitter
+      // can't dart the car and the motion stays smooth (matches the hero car).
+      const target = TRAVEL * (1 - eased);
+      animRef.current.carX += (target - animRef.current.carX) * Math.min(1, delta * SCROLL_SMOOTH);
     }
 
     const x = animRef.current.carX;
@@ -174,7 +195,16 @@ export default function ReviewsCarScene() {
   // Re-measure framing on resize / rotation so the car stays correctly framed.
   useEffect(() => {
     let t;
+    let lastW = window.innerWidth;
     const onResize = () => {
+      // The mobile address bar show/hide fires resize with only the HEIGHT changed.
+      // The canvas is sized in vh (locked to the large viewport), so it doesn't
+      // actually change — re-measuring then recomputes a slightly different scale
+      // from window.innerHeight and snaps the car's size mid-scroll. Ignore those
+      // height-only events; act only on a real width change (rotation / true
+      // resize). Desktop has no address bar, so it still reacts to any resize.
+      if (isMobile && window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
       clearTimeout(t);
       t = setTimeout(() => {
         measureRef.current?.();
@@ -184,7 +214,7 @@ export default function ReviewsCarScene() {
     };
     window.addEventListener('resize', onResize);
     return () => { clearTimeout(t); window.removeEventListener('resize', onResize); };
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     const anim = animRef.current;

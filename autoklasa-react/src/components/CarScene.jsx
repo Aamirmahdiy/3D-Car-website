@@ -14,12 +14,6 @@ gsap.registerPlugin(ScrollTrigger);
    Tweak these if the framing needs nudging.                     */
 const CAM_DIST = 12;          // camera distance on +Z (straight-on side view)
 const FOV = 35;               // desktop field of view
-// Phones use a true ORTHOGRAPHIC camera (desktop stays perspective). Parallel
-// rays = no viewing angle and no perspective, so translating the car left CANNOT
-// rotate its look or reveal its front — it projects its fixed side profile flat
-// and slides straight off, exactly as it sits at rest. ORTHO_VIEW_H is the world
-// height the camera frames (≈ the desktop perspective viewH, so framing matches).
-const ORTHO_VIEW_H_MOBILE = 7;
 const COVERAGE = 0.62;        // car width as fraction of viewport width (desktop)
 const COVERAGE_MOBILE = 0.75;
 const TRAVEL = 6;             // car drifts from +TRAVEL (right) to -TRAVEL (left)
@@ -32,19 +26,23 @@ const ENTRANCE_TRAVEL_MOBILE = 4.0;
 const isPhone = () => typeof window !== 'undefined' && window.innerWidth < 768;
 const travelDist = () => (isPhone() ? TRAVEL_MOBILE : TRAVEL);
 const entranceDist = () => (isPhone() ? ENTRANCE_TRAVEL_MOBILE : ENTRANCE_TRAVEL);
-// Ortho zoom that frames ORTHO_VIEW_H_MOBILE world-units across `heightPx` CSS
-// pixels of canvas. Driven by the ACTUAL canvas height — not window.innerHeight,
-// which on mobile lags the URL-bar show/hide and disagrees with the canvas's CSS
-// 100vh, mis-framing the car until a scroll forced a resize (the "floating /
-// only settles after I scroll" bug).
-const orthoZoom = heightPx => (heightPx || window.innerHeight) / ORTHO_VIEW_H_MOBILE;
 const FLIP_FACING = true;     // true → nose leads the direction of travel (left)
 const HANG = 1.1;             // how far below the band the car hangs (×half-height)
 const HANG_MOBILE = 0.9;      // phones: sit nearer the line (smaller gap)
 const hang = () => (isPhone() ? HANG_MOBILE : HANG);
-const LINE_OFFSET = 0;        // extra vertical nudge in world units
+const LINE_OFFSET = 0;          // desktop: extra vertical nudge in world units (+ up, − down)
+const LINE_OFFSET_MOBILE = -0.1;   // phones only: + moves the car up, − moves it down
+const lineOffset = () => (isPhone() ? LINE_OFFSET_MOBILE : LINE_OFFSET);
 const ENTRANCE_DURATION = 2.0;   // seconds — slow, graceful sweep-in
-const SCROLL_RANGE_VH = 1.4;     // scroll distance (×viewport height) that maps carX 0 → -TRAVEL
+const SCROLL_RANGE_VH = 1.4;     // desktop: scroll distance (×viewport height) that maps carX 0 → -TRAVEL
+// Phones aren't pinned (the sticky is taller than its 75vh wrapper, so the section
+// just scrolls past), so drive the car fully off in a shorter scroll window.
+const SCROLL_RANGE_VH_MOBILE = 0.7;
+const scrollRangeVh = () => (isPhone() ? SCROLL_RANGE_VH_MOBILE : SCROLL_RANGE_VH);
+// Mobile: how fast carX eases toward the live scroll position. Higher = snappier
+// (less trail), lower = smoother. The easing damps non-monotonic scrollY blips
+// (iOS momentum / address-bar reflow) so the car can't dart backward.
+const SCROLL_SMOOTH = 10;
 
 // Gentle slow-in / slow-out: no sudden velocity at either end, so there's
 // nothing for a dropped frame to judder against.
@@ -88,6 +86,33 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
   // Free merged geometry buffers when this scene unmounts.
   useEffect(() => () => disposeOptimized(group), [group]);
 
+  // Static, transform-independent model metrics — measured ONCE while `group` is
+  // still detached (identity world matrix), so the box is the car's NATIVE size.
+  // Recomputing this on resize is the bug it replaces: once <primitive> is
+  // mounted inside the rotation/scale wrapper groups below, setFromObject(group)
+  // returns the box of the already-rotated/scaled car — its swapped X/Z extents
+  // flip `size.z > size.x` (→ wrong sideRotY, car faces front) and its inflated
+  // length corrupts the scale. `group` is stable (useMemo), so this never re-runs.
+  const modelMetrics = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(group);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+
+    // A car is longest along its driving axis. Rotate so length lands on world X
+    // (screen horizontal) for a clean side profile.
+    let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
+    if (FLIP_FACING) sideRotY += Math.PI;
+
+    return {
+      sizeY: size.y,
+      carLength: Math.max(size.x, size.z),
+      sideRotY,
+      center: [-center.x, -center.y, -center.z],
+    };
+  }, [group]);
+
   // Measure the model + viewport into `geom`. Re-run on resize (via measureRef,
   // owned by the parent) so the car stays sized and aligned to the band after a
   // window resize or device rotation.
@@ -95,47 +120,26 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
     if (!group) return;
 
     const measure = () => {
+      // Width is unaffected by the mobile address bar, so it's a safe basis for
+      // the breakpoint and coverage.
       const isMobile = window.innerWidth < 768;
       const bandTop = isMobile ? BAND_RIGHT_M : BAND_RIGHT;
       const bandLeft = isMobile ? BAND_LEFT_M : BAND_LEFT;
 
-      // Measure the model in its native orientation
-      const box = new THREE.Box3().setFromObject(group);
-      const size = new THREE.Vector3();
-      const center = new THREE.Vector3();
-      box.getSize(size);
-      box.getCenter(center);
+      // Native model metrics measured once (transform-independent) — never the
+      // mounted/rotated/scaled box.
+      const { sizeY, carLength, sideRotY, center } = modelMetrics;
 
-      // A car is longest along its driving axis. Rotate so length lands on
-      // world X (screen horizontal) for a clean side profile.
-      let sideRotY = size.z > size.x ? Math.PI / 2 : 0;
-      if (FLIP_FACING) sideRotY += Math.PI;
-
-      const carLength = Math.max(size.x, size.z);
-
-      // Viewport in world units at the z=0 plane. Mobile is orthographic (a fixed
-      // framed height); desktop derives it from the perspective FOV + distance.
-      let aspect, viewH, viewW;
-      if (isMobile) {
-        // Read the framed world size straight off the LIVE ortho frustum, which
-        // R3F keeps locked to the canvas element. The frustum (and its aspect)
-        // tracks the real canvas, so the car stays framed/aligned to the band on
-        // the very first frame — no dependence on window.innerHeight, which lags
-        // the mobile URL-bar. Fall back to the nominal height if the frustum
-        // isn't populated yet (top===bottom on a brand-new camera).
-        const z = camera.zoom || 1;
-        viewW = (camera.right - camera.left) / z;
-        viewH = (camera.top - camera.bottom) / z;
-        if (!(viewH > 0)) {
-          viewH = ORTHO_VIEW_H_MOBILE;
-          viewW = viewH * (window.innerWidth / window.innerHeight);
-        }
-        aspect = viewW / viewH;
-      } else {
-        aspect = window.innerWidth / window.innerHeight;
-        viewH = 2 * CAM_DIST * Math.tan(((FOV * Math.PI) / 180) / 2);
-        viewW = viewH * aspect;
-      }
+      // Viewport in world units at the z=0 plane, from the perspective FOV +
+      // distance. Same camera on mobile and desktop (the proven setup the Porsche
+      // scene uses) — no orthographic camera, which broke on iOS Safari.
+      // Aspect comes from the LIVE camera (kept in sync with the canvas by R3F),
+      // not window.innerHeight — the canvas is CSS 100vh (fixed to the large
+      // viewport), so its true aspect doesn't change when the mobile address bar
+      // shows/hides. Using innerHeight here re-sized the car on every scroll stop.
+      const aspect = camera.aspect || window.innerWidth / window.innerHeight;
+      const viewH = 2 * CAM_DIST * Math.tan(((FOV * Math.PI) / 180) / 2);
+      const viewW = viewH * aspect;
 
       // Auto-scale: fit car to COVERAGE of the viewport width
       const coverage = isMobile ? COVERAGE_MOBILE : COVERAGE;
@@ -146,21 +150,14 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
       const slope = (bandLeft - bandTop) / aspect;
       const tilt = Math.atan(slope);
 
-      // Mobile stop point: the most-negative carX at which the car's leading
-      // (left) edge meets the screen's left edge, so on phones it drives up to
-      // the edge and stops there instead of continuing off-screen. Account for
-      // the slight tilt when measuring the car's horizontal half-extent.
-      const halfHeight = (size.y * scale) / 2;
-      const carHalfLen = (viewW * coverage) / 2;
-      const horizHalfExtent = carHalfLen * Math.cos(tilt) + halfHeight * Math.abs(Math.sin(tilt));
-      const stopX = Math.min(0, -(viewW / 2 - horizHalfExtent));
+      const halfHeight = (sizeY * scale) / 2;
 
-      // Sync the Three.js Box3 measurement into state; runs on mount + resize.
+      // Sync framing into state; runs on mount + resize.
       setGeom({
         scale,
         sideRotY,
         tilt,
-        center: [-center.x, -center.y, -center.z],
+        center,
         halfHeight,
         viewH,
         viewW,
@@ -168,14 +165,13 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
         halfH: viewH / 2,
         bandTop,
         bandLeft,
-        stopX,
       });
     };
 
     measureRef.current = measure;
     measure();
     return () => { measureRef.current = null; };
-  }, [group, measureRef]);
+  }, [group, measureRef, modelMetrics, camera]);
 
   // Once geom is set the <primitive> is committed to the scene graph, so the
   // car's materials/buffers exist for the warm-up to compile. Kick off the
@@ -200,11 +196,11 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
       // Rest position the sweep eases into: 0 if the user hasn't scrolled,
       // otherwise the live scroll-mapped carX. Smoothed so a fast scroll can't
       // snap the car. With no scroll this stays 0 → a plain centre sweep.
-      const range = window.innerHeight * SCROLL_RANGE_VH;
-      // Mobile drives toward the on-screen stop point (geom.stopX); desktop drifts
-      // the full TRAVEL off-screen as before.
-      const restMax = isPhone() ? geom.stopX : -travelDist();
-      const liveTarget = restMax * Math.min(Math.max(window.scrollY / range, 0), 1);
+      // Both platforms now ease toward the live scroll position, so scrolling
+      // before the drive-in finishes flows the car naturally to that point
+      // instead of darting ahead.
+      const range = window.innerHeight * scrollRangeVh();
+      const liveTarget = -travelDist() * Math.min(Math.max(window.scrollY / range, 0), 1);
       e.target += (liveTarget - e.target) * Math.min(1, delta * 8);
 
       // One continuous eased move from off-screen to that rest position, so a
@@ -221,18 +217,17 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
       }
     }
 
-    // On mobile frameloop is always-on, so we compute carX from page scroll here
-    // every frame — no GSAP ScrollTrigger, no invalidate() dependency. Same
-    // mapping the entrance eased toward, so the hand-off is seamless. Independent
-    // of the wrapper's own height (the old offsetHeight−vh math broke when the
-    // section was shorter than the viewport, pinning progress at 0 forever).
-    if (isPhone() && e.done) {
-      const range = window.innerHeight * SCROLL_RANGE_VH;
-      const progress = Math.min(1, Math.max(0, window.scrollY / range));
-      // Drive to the screen edge and stop there (geom.stopX). Past that, the car
-      // holds its place and the page just scrolls on — it never drives off-screen,
-      // so it can't rotate or show its front.
-      animRef.current.carX = geom.stopX * progress;
+    // After the entrance, mobile drives carX from the live scroll position every
+    // frame (frameloop="always" on mobile). Reading window.scrollY live — rather
+    // than via a GSAP scrubbed tween — is immune to the mobile address-bar resize
+    // storm that leaves a ScrollTrigger stale. We ease toward the scroll-mapped
+    // target instead of snapping to it: the lerp only ever approaches the target,
+    // so a non-monotonic scrollY blip can't dart the car backward, and the per-
+    // frame motion stays smooth instead of stepping between sparse scroll events.
+    if (e.done && isPhone()) {
+      const range = window.innerHeight * scrollRangeVh();
+      const target = -travelDist() * Math.min(Math.max(window.scrollY / range, 0), 1);
+      animRef.current.carX += (target - animRef.current.carX) * Math.min(1, delta * SCROLL_SMOOTH);
     }
 
     const x = animRef.current.carX;
@@ -250,7 +245,7 @@ function MercedesModel({ animRef, entranceRef, startEntranceRef, warmupRef, meas
     const fx = (x + geom.halfW) / geom.viewW;            // 0 (left) → 1 (right)
     const bandFrac = geom.bandLeft + (geom.bandTop - geom.bandLeft) * fx;
     const yLine = geom.halfH - bandFrac * geom.viewH;    // camera looks at origin
-    const y = yLine - geom.halfHeight * hang() + LINE_OFFSET;
+    const y = yLine - geom.halfHeight * hang() + lineOffset();
 
     groupRef.current.position.set(x, y, 0);
     groupRef.current.rotation.z = geom.tilt;
@@ -332,16 +327,8 @@ export default function CarScene() {
       clearTimeout(t);
       t = setTimeout(() => {
         if (cameraRef.current) {
-          const cam = cameraRef.current;
-          if (isMobile) {
-            // Orthographic: keep ORTHO_VIEW_H_MOBILE mapped to the canvas height
-            // as it changes (mobile browser chrome show/hide). R3F has already
-            // resized the frustum to the new canvas, so read the height off it.
-            cam.zoom = orthoZoom(cam.top - cam.bottom);
-          } else {
-            cam.fov = FOV;
-          }
-          cam.updateProjectionMatrix();
+          cameraRef.current.fov = FOV;
+          cameraRef.current.updateProjectionMatrix();
         }
         measureRef.current?.();
         invalidateRef.current?.();
@@ -360,8 +347,7 @@ export default function CarScene() {
     const cam = cameraRef.current;
     if (cam) {
       cam.position.set(0, 0, CAM_DIST);
-      if (isMobile) cam.zoom = orthoZoom(cam.top - cam.bottom);
-      else cam.fov = FOV;
+      cam.fov = FOV;
       cam.lookAt(0, 0, 0);
       cam.updateProjectionMatrix();
     }
@@ -379,8 +365,8 @@ export default function CarScene() {
     // Scroll trigger — created only after the entrance completes (called from
     // onEntranceDone) so it can never override carX while the car is still moving in.
     createScrollTriggerRef.current = () => {
-      // Mobile: carX is driven from scroll position inside useFrame every frame
-      // (frameloop="always" on mobile). No GSAP needed.
+      // Mobile: carX is driven from window.scrollY inside useFrame (nudged by a
+      // passive scroll listener), so no GSAP ScrollTrigger here.
       if (scrollCtxRef.current || isPhone()) return;
       scrollCtxRef.current = gsap.context(() => {
         gsap.fromTo(anim,
@@ -426,22 +412,13 @@ export default function CarScene() {
     <div className="car-scene-wrapper" ref={wrapperRef}>
       <div className="car-scene-sticky">
         <Canvas
-          // Switching camera TYPE (perspective↔orthographic) needs a fresh Canvas;
-          // the key remounts it if the breakpoint flips at runtime.
-          key={isMobile ? 'ortho' : 'persp'}
           className="car-canvas"
           frameloop={inView ? (entranceActive || isMobile ? 'always' : 'demand') : 'never'}
           dpr={[1, 1.5]}
-          orthographic={isMobile}
-          camera={isMobile
-            ? { position: [0, 0, CAM_DIST], near: 0.1, far: 1000 }
-            : { fov: FOV, position: [0, 0, CAM_DIST] }}
-          onCreated={({ camera, invalidate, size }) => {
+          camera={{ fov: FOV, position: [0, 0, CAM_DIST] }}
+          onCreated={({ camera, invalidate }) => {
             camera.position.set(0, 0, CAM_DIST);
-            // size.height is the real canvas CSS height (100vh), so the ortho
-            // framing is correct on the first frame regardless of the URL bar.
-            if (isMobile) camera.zoom = orthoZoom(size.height);
-            else camera.fov = FOV;
+            camera.fov = FOV;
             camera.lookAt(0, 0, 0);
             camera.updateProjectionMatrix();
             invalidateRef.current = invalidate;
