@@ -136,4 +136,12 @@
 
 @media (max-width: 768px) {
   .review-card { width: 80vw; margin-right: 16px; }
+  /* Pull the heading up under the third car: the car hangs from the top of its
+     section, leaving empty grey at the bottom. The reviews bg matches that grey,
+     so a negative margin overlaps it seamlessly. Trim the big section top padding
+     too. Tune margin-top (more negative = closer) / padding-top to taste. */
+  .reviews {
+    margin-top: -14vh;
+    padding-top: 32px;
+  }
 }

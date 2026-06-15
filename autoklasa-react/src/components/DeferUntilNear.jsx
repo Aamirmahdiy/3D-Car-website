@@ -23,7 +23,11 @@ export default function DeferUntilNear({ children, placeholderClassName, rootMar
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [show, rootMargin]);
+    // `rootMargin` is expected to be a stable string literal (see prop default).
+    // `show` is intentionally omitted: the effect only ever runs while false,
+    // and the early return above guards the post-reveal render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (show) return children;
   return <div ref={ref} className={placeholderClassName} aria-hidden="true" />;

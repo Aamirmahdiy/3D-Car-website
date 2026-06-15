@@ -6,8 +6,9 @@
 }
 
 .car-scene-sticky {
-  position: relative;
-  height: 100%;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   width: 100%;
   overflow: hidden;
   background: #ffffff;
@@ -41,10 +42,17 @@
 
 @media (max-width: 768px) {
   .car-scene-wrapper {
-    height: 300vh;
+    height: 75vh;
+    /* Less overlap into the hero so the buttons don't sit on top of the car */
+    margin-top: -25vh;
+    /* Canvas is a full 100vh (so the 3D car aligns to the band), but the wrapper
+       is only 75vh — clip the overflow so its white box can't cover the next
+       section. The car rides in the top ~30–48%, well clear of the clip. */
+    overflow: clip;
   }
-  /* Steeper, higher band so the car has room on narrow screens */
+  /* Lower band edge + shallow tilt: car rides nearer mid-screen, not tucked up
+     under the hero. Right edge 30%, left edge 38% (matches BAND_*_M in JS). */
   .car-scene-band {
-    clip-path: polygon(0 0, 100% 0, 100% 12%, 0 30%);
+    clip-path: polygon(0 0, 100% 0, 100% 30%, 0 38%);
   }
 }

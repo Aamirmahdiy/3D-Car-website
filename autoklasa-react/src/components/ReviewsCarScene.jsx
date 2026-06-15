@@ -12,11 +12,22 @@ gsap.registerPlugin(ScrollTrigger);
 
 const CAM_DIST    = 12;
 const FOV         = 35;
-const COVERAGE    = 1;
+const COVERAGE        = 1.0;           // desktop: car width as fraction of viewport width
+const COVERAGE_MOBILE = 1.6;           // phones: bigger car (tune independently of desktop)
 const FLIP_FACING = true;
 const TRAVEL      = 6;                  // car drifts from +TRAVEL (right) to 0 (centre)
+const Z_CAR       = -2.5;              // car sits slightly behind the z=0 plane
+const Y_OFFSET    = 0.1;               // desktop: world-unit nudge (keeps the laptop look as-is)
+// Mobile: place the wheel line (top of the flipped car) as a fraction DOWN from
+// the top black/grey line. 0 = wheels exactly on the line; increase → car drops
+// lower into the grey; negative → wheels poke up into the black.
+const WHEEL_FRAC_MOBILE = 0.03;
+// Frustum half-height (world units) at the car's actual depth. Camera is straight
+// on (no tilt), so this maps a screen fraction to a world Y exactly. Using the
+// car's depth (not z=0) is what makes "wheels on the line" land precisely.
+const FRUSTUM_HALF_AT_CAR = (CAM_DIST - Z_CAR) * Math.tan(((FOV * Math.PI) / 180) / 2);
 
-function PorscheModel({ animRef, measureRef }) {
+function PorscheModel({ animRef, measureRef, sectionRef, isMobile }) {
   const { scene }       = useGLTF('/porsche911.glb');
   const groupRef        = useRef();
   const [geom, setGeom] = useState(null);
@@ -57,7 +68,8 @@ function PorscheModel({ animRef, measureRef }) {
       const viewH      = 2 * CAM_DIST * Math.tan(fovV / 2);
       const viewW      = viewH * aspect;
       const carLen     = Math.max(size.x, size.z);
-      const scale      = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
+      const coverage   = window.innerWidth < 768 ? COVERAGE_MOBILE : COVERAGE;
+      const scale      = carLen > 0 ? (viewW * coverage) / carLen : 1;
       const halfHeight = (size.y * scale) / 2;
       const halfH      = viewH / 2;
 
@@ -72,6 +84,21 @@ function PorscheModel({ animRef, measureRef }) {
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
+
+    // Mobile: frameloop is always-on, so derive carX from scroll here every frame
+    // instead of GSAP. On phones the address bar show/hide fires resize mid-scroll
+    // and ScrollTrigger goes stale, leaving the car off-screen ("disappears when
+    // scrolling back"). Reading scroll live each frame is self-correcting.
+    if (isMobile && sectionRef.current) {
+      const rect  = sectionRef.current.getBoundingClientRect();
+      const vh    = window.innerHeight;
+      // Mirror the GSAP trigger: start 'top 60%' (p=0) → end 'center center' (p=1).
+      const denom = 0.10 * vh + rect.height / 2;
+      const p     = denom > 0 ? Math.min(1, Math.max(0, (0.60 * vh - rect.top) / denom)) : 0;
+      const eased = 1 - (1 - p) ** 3;        // power3.out, matching the desktop tween
+      animRef.current.carX = TRAVEL * (1 - eased);
+    }
+
     const x = animRef.current.carX;
 
     // ── wheel rolling ──────────────────────────────────────────────────────
@@ -84,7 +111,16 @@ function PorscheModel({ animRef, measureRef }) {
     prevCarX.current = x;
 
     // ── position ───────────────────────────────────────────────────────────
-    groupRef.current.position.set(x, geom.halfH - geom.halfHeight, -2.5);
+    let yCenter;
+    if (isMobile) {
+      // Anchor the wheel line (bbox top after the flip) to WHEEL_FRAC_MOBILE below
+      // the top line, depth-corrected so it lands exactly where intended on screen.
+      const ndcY = 1 - 2 * WHEEL_FRAC_MOBILE;          // 0 frac → NDC top (+1)
+      yCenter = ndcY * FRUSTUM_HALF_AT_CAR - geom.halfHeight;
+    } else {
+      yCenter = geom.halfH - geom.halfHeight + Y_OFFSET;
+    }
+    groupRef.current.position.set(x, yCenter, Z_CAR);
   });
 
   if (!geom) return null;
@@ -118,15 +154,22 @@ export default function ReviewsCarScene() {
     const el = sectionRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => {
-        setInView(entry.isIntersecting);
-        if (entry.isIntersecting) invalidateRef.current?.();
-      },
+      ([entry]) => setInView(entry.isIntersecting),
       { rootMargin: '200px 0px' }
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  // Render one frame once the section is back in view. Done in an effect (not in
+  // the IO callback) so the Canvas has already re-rendered with frameloop='demand'
+  // — calling invalidate() while frameloop is still 'never' is a no-op, which is
+  // what left the car missing after scrolling away and back.
+  useEffect(() => {
+    if (!inView) return;
+    const id = requestAnimationFrame(() => invalidateRef.current?.());
+    return () => cancelAnimationFrame(id);
+  }, [inView]);
 
   // Re-measure framing on resize / rotation so the car stays correctly framed.
   useEffect(() => {
@@ -147,6 +190,10 @@ export default function ReviewsCarScene() {
     const anim = animRef.current;
     anim.carX  = TRAVEL;
 
+    // Mobile drives carX from scroll inside useFrame (frameloop="always"); no GSAP,
+    // so the address-bar resize storm can't leave the car stranded off-screen.
+    if (isMobile) return;
+
     const ctx = gsap.context(() => {
       gsap.fromTo(anim,
         { carX: TRAVEL },
@@ -156,7 +203,7 @@ export default function ReviewsCarScene() {
           immediateRender: false,
           scrollTrigger: {
             trigger: sectionRef.current,
-            start: 'top 85%',
+            start: 'top 60%',
             end:   'center center',
             scrub: 0.5,
             onUpdate: () => invalidateRef.current?.(),
@@ -166,13 +213,13 @@ export default function ReviewsCarScene() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [isMobile]);
 
   return (
     <div className="reviews-car-section" ref={sectionRef}>
       <Canvas
         className="reviews-car-canvas"
-        frameloop={inView ? 'demand' : 'never'}
+        frameloop={inView ? (isMobile ? 'always' : 'demand') : 'never'}
         dpr={[1, 1.5]}
         camera={{ fov: FOV, position: [0, 0, CAM_DIST] }}
         onCreated={({ camera, invalidate }) => {
@@ -188,7 +235,7 @@ export default function ReviewsCarScene() {
         <Environment files={CITY_ENV} background={false} />
 
         <Suspense fallback={null}>
-          <PorscheModel animRef={animRef} measureRef={measureRef} />
+          <PorscheModel animRef={animRef} measureRef={measureRef} sectionRef={sectionRef} isMobile={isMobile} />
         </Suspense>
       </Canvas>
     </div>

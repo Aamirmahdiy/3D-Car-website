@@ -7,7 +7,7 @@ const CARDS = [
 
 export default function Categories() {
   return (
-    <section className="categories">
+    <section className="categories" id="services">
       <div className="section-inner">
         <div className="cat-grid">
           {CARDS.map((c) => (
@@ -18,7 +18,7 @@ export default function Categories() {
               </div>
               <div className="cat-actions">
                 <a href="#" className="cat-btn cat-btn--outline">مشاهده خدمات</a>
-                <a href="#" className="cat-btn cat-btn--gold">درخواست قیمت</a>
+                <a href="#" className="cat-btn cat-btn--gold">مشاهده خودرو ها</a>
                 <a href="#" className="cat-btn cat-btn--dark">جستجوی خودرو</a>
               </div>
             </div>

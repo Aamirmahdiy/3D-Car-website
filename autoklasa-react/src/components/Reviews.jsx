@@ -34,7 +34,7 @@ export default function Reviews() {
   }, []);
 
   return (
-    <section className="reviews" ref={sectionRef}>
+    <section className="reviews" id="reviews" ref={sectionRef}>
       <div className="section-inner">
         <div className="reviews-header">
           <h2 className="section-title" style={{ marginBottom: 0 }}>

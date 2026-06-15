@@ -32,7 +32,8 @@
 .cat-sub {
   font-size: 1.35rem;
   font-weight: 400;
-  color: #9ca3af;
+  /* #9ca3af fails WCAG AA on the white card (~2.6:1); --gray-500 passes (~4.8:1). */
+  color: var(--gray-500);
   margin-top: 2px;
 }
 
@@ -68,7 +69,9 @@
 
 .cat-btn--gold {
   background: linear-gradient(135deg, #c99e4d 0%, #a87b2a 100%);
-  color: #fff;
+  /* Dark text reads far better on the light-gold fill than white. */
+  color: var(--dark);
+  font-weight: 600;
 }
 
 .cat-btn--dark {

@@ -14,34 +14,51 @@ gsap.registerPlugin(ScrollTrigger);
 const FOV_WHY      = 45;
 const CAM_Y        = 14;
 const CAM_Z        = 5;
-const COVERAGE     = 0.50;
-// clip-path diagonal: (0%,94%) → (100%,8%) — height drop = 86% per 100% width
-const DIAG_DROP    = 0.86;
+const COVERAGE     = 0.45;
+const COVERAGE_MOBILE = 0.85;   // car spans more of the narrow viewport on phones
+// clip-path diagonal: (0%,82%) → (100%,32%) — height drop = 50% per 100% width
+const DIAG_DROP    = 0.50;
 // total extra px the canvas has vs 0.7*vh: 160px above section + 80px section padding
 const CANVAS_EXTRA = 240;
-// world-Z offset shifting the car down to match the lowered diagonal position
+// world-Z offset shifting the car down to match the diagonal position
 const Z_DROP       = 2.0;
 
 // zScale: Z-per-unit-X so the car's screen trajectory is parallel to the CSS diagonal.
 // Solved from: dCSS_y/dCSS_x = (CAM_Y/camMag) * zScale * canvasAspect = -DIAG_DROP
+function canvasHeight() {
+  // Mobile (.why-section height:55vh, no 80px padding contribution to border-box total):
+  //   canvas = 55vh + 160px above section
+  // Desktop (.why-section height:calc(70vh+80px) border-box, padding:80px already inside):
+  //   canvas = (70vh+80px) + 160px above = 0.7*vh + 240
+  return window.innerWidth < 768
+    ? 0.55 * window.innerHeight + 160
+    : 0.7 * window.innerHeight + CANVAS_EXTRA;
+}
+
 function computeZScale() {
-  const canvasH      = 0.7 * window.innerHeight + CANVAS_EXTRA;
+  const canvasH      = canvasHeight();
   const canvasAspect = window.innerWidth / canvasH;
   const camMag       = Math.sqrt(CAM_Y ** 2 + CAM_Z ** 2);
-  return -DIAG_DROP / ((CAM_Y / camMag) * canvasAspect);
+  // The clip-path drop is a fraction of .why-dark (= the section), but the car
+  // projects into the canvas, which is 160px taller (top:-160px). The same world
+  // slope renders steeper in the taller canvas, so scale the drop by darkH/canvasH
+  // to keep the car's on-screen trajectory truly parallel to the line.
+  const darkH        = canvasH - 160;
+  const effDrop      = DIAG_DROP * (darkH / canvasH);
+  return -effDrop / ((CAM_Y / camMag) * canvasAspect);
 }
 
 // Travel distance: world X where the car centre sits exactly at the canvas right edge (NDC_x = 1).
 // Solved from: x / (d(x) * canvasAspect * tan(vFov/2)) = 1, where d(x) = camMag − (CAM_Z/camMag)*zScale*x
 function computeTravel(zScale) {
-  const canvasH      = 0.7 * window.innerHeight + CANVAS_EXTRA;
+  const canvasH      = canvasHeight();
   const canvasAspect = window.innerWidth / canvasH;
   const camMag       = Math.sqrt(CAM_Y ** 2 + CAM_Z ** 2);
   const A            = canvasAspect * Math.tan(((FOV_WHY * Math.PI) / 180) / 2);
   return (camMag * A) / (1 + (CAM_Z / camMag) * zScale * A);
 }
 
-function TopCarModel({ animRef, measureRef }) {
+function TopCarModel({ animRef, measureRef, sectionRef, isMobile }) {
   const { scene } = useGLTF('/porsche911.glb');
   const groupRef  = useRef();
   const [geom, setGeom] = useState(null);
@@ -83,7 +100,8 @@ function TopCarModel({ animRef, measureRef }) {
       const hFov    = 2 * Math.atan(Math.tan(fovV / 2) * aspect);
       const viewW   = 2 * camDist * Math.tan(hFov / 2);
       const carLen  = Math.max(size.x, size.z);
-      const scale   = carLen > 0 ? (viewW * COVERAGE) / carLen : 1;
+      const coverage = window.innerWidth < 768 ? COVERAGE_MOBILE : COVERAGE;
+      const scale   = carLen > 0 ? (viewW * coverage) / carLen : 1;
 
       // Sync the Three.js Box3 measurement into state; runs on mount + resize.
       setGeom({ scale, rotY, center: [-cent.x, -cent.y, -cent.z] });
@@ -96,6 +114,22 @@ function TopCarModel({ animRef, measureRef }) {
 
   useFrame(() => {
     if (!groupRef.current || !geom) return;
+
+    // Mobile: frameloop is always-on, so we derive carX from scroll here every
+    // frame instead of GSAP. On phones the address bar show/hide fires resize
+    // mid-scroll, which used to reset the GSAP tween's start and strand the car
+    // off-screen ("car disappears when scrolling back up"). Reading scroll live
+    // each frame is self-correcting and matches the hero CarScene approach.
+    if (isMobile && sectionRef.current) {
+      const rect  = sectionRef.current.getBoundingClientRect();
+      const vh    = window.innerHeight;
+      // Mirror the GSAP trigger: start 'top 57%' (p=0) → end 'center center' (p=1).
+      const denom = 0.07 * vh + rect.height / 2;
+      const p     = denom > 0 ? Math.min(1, Math.max(0, (0.57 * vh - rect.top) / denom)) : 0;
+      const eased = 1 - (1 - p) * (1 - p);   // power2.out, matching the desktop tween
+      animRef.current.carX = computeTravel(animRef.current.zScale) * (1 - eased);
+    }
+
     const x      = animRef.current.carX;
     const zScale = animRef.current.zScale;
     groupRef.current.position.set(x, 0, zScale * x + Z_DROP);
@@ -130,15 +164,22 @@ export default function WhySection() {
     const el = sectionRef.current;
     if (!el) return;
     const io = new IntersectionObserver(
-      ([entry]) => {
-        setInView(entry.isIntersecting);
-        if (entry.isIntersecting) invalidateRef.current?.();
-      },
+      ([entry]) => setInView(entry.isIntersecting),
       { rootMargin: '200px 0px' }
     );
     io.observe(el);
     return () => io.disconnect();
   }, []);
+
+  // Render one frame once the section is back in view. Done in an effect (not in
+  // the IO callback) so the Canvas has already re-rendered with frameloop='demand'
+  // — calling invalidate() while frameloop is still 'never' is a no-op, which is
+  // what left the car missing after scrolling away and back (desktop/demand path).
+  useEffect(() => {
+    if (!inView) return;
+    const id = requestAnimationFrame(() => invalidateRef.current?.());
+    return () => cancelAnimationFrame(id);
+  }, [inView]);
 
   // Keep zScale AND the car framing (scale/rotation) in sync with window size so
   // a resize or device rotation doesn't leave the car mis-sized or off the diagonal.
@@ -149,18 +190,25 @@ export default function WhySection() {
       t = setTimeout(() => {
         animRef.current.zScale = computeZScale();
         measureRef.current?.();          // recompute scale + diagonal rotation
-        animRef.current.carX = computeTravel(animRef.current.zScale);
+        // On mobile useFrame recomputes carX from scroll every frame, so don't
+        // reset it here — doing so (on the address-bar resize) is what stranded
+        // the car off-screen. Desktop still needs the start position refreshed.
+        if (!isMobile) animRef.current.carX = computeTravel(animRef.current.zScale);
         invalidateRef.current?.();
         ScrollTrigger.refresh();
       }, 150);
     };
     window.addEventListener('resize', onResize);
     return () => { clearTimeout(t); window.removeEventListener('resize', onResize); };
-  }, []);
+  }, [isMobile]);
 
   useEffect(() => {
     const anim = animRef.current;
     anim.carX  = computeTravel(anim.zScale); // car starts half-visible at canvas right edge
+
+    // Mobile drives carX from scroll inside useFrame (frameloop="always"); no GSAP,
+    // so the address-bar resize storm can't strand the car off-screen.
+    if (isMobile) return;
 
     const ctx = gsap.context(() => {
       gsap.to(anim, {
@@ -178,7 +226,7 @@ export default function WhySection() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, []);
+  }, [isMobile]);
 
   return (
     <section className="why-section" ref={sectionRef}>
@@ -188,7 +236,7 @@ export default function WhySection() {
       {/* 2 — 3D canvas (DOM order puts it above dark without relying on z-index) */}
       <Canvas
         className="why-canvas"
-        frameloop={inView ? 'demand' : 'never'}
+        frameloop={inView ? (isMobile ? 'always' : 'demand') : 'never'}
         dpr={[1, 1.5]}
         camera={{ fov: FOV_WHY, position: [0, CAM_Y, CAM_Z] }}
         onCreated={({ camera, invalidate }) => {
@@ -203,7 +251,7 @@ export default function WhySection() {
         <Environment files={CITY_ENV} background={false} />
 
         <Suspense fallback={null}>
-          <TopCarModel animRef={animRef} measureRef={measureRef} />
+          <TopCarModel animRef={animRef} measureRef={measureRef} sectionRef={sectionRef} isMobile={isMobile} />
         </Suspense>
       </Canvas>
 
@@ -228,9 +276,21 @@ export default function WhySection() {
 
       {/* 5 — security — lower-left */}
       <div className="why-feature why-feature--left">
+        <div className="why-feature-icon">
+          {/* Outlined shield + key — fill:none via inline style overrides the
+              stylesheet's solid fill so it stays line-art (keeps the gold glow). */}
+          <svg viewBox="0 0 24 24" style={{ fill: 'none', stroke: '#c99e4d', strokeWidth: 1.6 }} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2.5 19.5 5.3 V11 C19.5 15.9 16.2 19.3 12 21.5 C7.8 19.3 4.5 15.9 4.5 11 V5.3 Z" />
+            <circle cx="12" cy="9" r="2.4" />
+            <circle cx="12" cy="9" r="0.7" />
+            <path d="M12 11.4 V16.6" />
+            <path d="M12 14 H14" />
+            <path d="M12 16 H13.4" />
+          </svg>
+        </div>
         <div>
           <div className="why-feature-title">امنیت</div>
-          <div className="why-feature-desc">ما فقط خودروهایی را می‌خریم که کارکرد آن‌ها با اسناد نمایندگی مجاز قابل تأیید باشد.</div>
+          <div className="why-feature-desc">ما خودروهایی را انتخاب می‌کنیم که اصالت کارکرد آن‌ها توسط کارشناس تأیید شده باشد.</div>
         </div>
       </div>
     </section>

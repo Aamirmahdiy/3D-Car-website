@@ -22,12 +22,22 @@ body {
   color: var(--gray-700);
   background: var(--white);
   line-height: 1.6;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 a { text-decoration: none; color: inherit; }
 ul { list-style: none; }
 img { display: block; max-width: 100%; }
+
+/* Visible keyboard focus for every interactive element. :focus-visible keeps
+   mouse clicks clean while showing a ring for keyboard/AT navigation — the
+   stylesheet previously had no focus styles at all. */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
 
 /* Hidden placeholder blocks kept only for layout spacing: freeze any
    animations inside them so an invisible element costs no ongoing work. */
@@ -96,12 +106,12 @@ section { padding: 88px 24px; }
   font-size: 0.95rem;
   border-radius: 10px;
   transition: background .2s, transform .15s, box-shadow .2s;
-  box-shadow: 0 4px 20px rgba(232,93,4,.4);
+  box-shadow: 0 4px 20px rgba(201,158,77,.4);
 }
 .btn-primary:hover {
   background: var(--orange-h);
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(232,93,4,.5);
+  box-shadow: 0 8px 28px rgba(201,158,77,.5);
 }
 
 .btn-secondary {

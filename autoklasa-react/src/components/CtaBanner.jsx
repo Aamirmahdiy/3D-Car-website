@@ -5,7 +5,7 @@ export default function CtaBanner() {
     <div className="cta-banner">
       <div className="cta-inner">
         <div className="section-label">آماده یک خودروی جدید هستید؟</div>
-        <h2 className="section-title">سفارش جستجوی<br />رایگان خودرو</h2>
+        <h2 className="section-title">سفارش رایگان<br />جستجوی خودرو</h2>
         <p>نیازهای خود را شرح دهید تا خودروی ایده‌آل را برای شما پیدا کنیم. بدون تعهد، بدون هزینه اولیه.</p>
         <div className="cta-actions">
           <a href="#" className="btn-primary">
@@ -14,11 +14,11 @@ export default function CtaBanner() {
             </svg>
             سفارش جستجوی خودرو
           </a>
-          <a href="tel:+48579779220" className="btn-secondary">
+          <a href="tel:+989102181322" className="btn-secondary">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
             </svg>
-            +48 579 779 220
+            +98 910 218 1322
           </a>
         </div>
       </div>

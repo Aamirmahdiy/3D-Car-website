@@ -1,5 +1,5 @@
 .cta-banner {
-  background: var(--black);
+  background: var(--white);
   padding: 80px 24px;
   position: relative;
   overflow: hidden;
@@ -9,7 +9,18 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(232,93,4,.18) 0%, transparent 70%);
+  background:
+    radial-gradient(ellipse 70% 90% at 50% 50%, rgba(201,158,77,.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Gold border accent along the top */
+.cta-banner::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
   pointer-events: none;
 }
 
@@ -21,7 +32,18 @@
   z-index: 1;
 }
 .cta-inner .section-label { justify-content: center; }
-.cta-inner .section-title { color: var(--white); margin-bottom: 16px; }
-.cta-inner p { color: #9ca3af; font-size: 1rem; margin-bottom: 36px; line-height: 1.7; }
+.cta-inner .section-title { color: var(--dark); margin-bottom: 16px; }
+.cta-inner p { color: var(--gray-500); font-size: 1rem; margin-bottom: 36px; line-height: 1.7; }
 
 .cta-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+.cta-actions .btn-secondary {
+  color: var(--dark);
+  border-color: var(--dark);
+  background: transparent;
+}
+.cta-actions .btn-secondary:hover {
+  background: var(--dark);
+  color: var(--white);
+  border-color: var(--dark);
+}

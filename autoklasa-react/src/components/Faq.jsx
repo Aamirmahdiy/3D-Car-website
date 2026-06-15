@@ -33,12 +33,17 @@ export default function Faq() {
         <div className="faq-grid">
           {FAQ_DATA.map((item, i) => (
             <div className={`faq-item${openIndex === i ? ' open' : ''}`} key={i}>
-              <button className="faq-question" onClick={() => toggle(i)}>
+              <button
+                className="faq-question"
+                onClick={() => toggle(i)}
+                aria-expanded={openIndex === i}
+                aria-controls={`faq-answer-${i}`}
+              >
                 <span className="faq-question-text">{item.q}</span>
                 <div className="faq-toggle"><PlusIcon /></div>
               </button>
               {openIndex === i && (
-                <div className="faq-answer">{item.a}</div>
+                <div className="faq-answer" id={`faq-answer-${i}`}>{item.a}</div>
               )}
             </div>
           ))}
