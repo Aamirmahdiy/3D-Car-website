@@ -1,10 +1,10 @@
 import '../styles/statsBar.css';
 
 const STATS = [
-  { number: '۴۰۰۰', suffix: '+', desc: 'مشتری راضی', gold: true },
+  { number: '۴۰', suffix: '+', desc: 'مشتری راضی', gold: true },
   { number: '۴٫', suffix: '۶',  desc: 'امتیاز گوگل' },
   { number: '۱۰',  suffix: '+', desc: 'سال تجربه' },
-  { number: '۱۵',  suffix: '+', desc: 'کشور واردات' },
+  { number: '۵',  suffix: '+', desc: 'کشور واردات' },
   { number: '۱۰۰', suffix: '٪', desc: 'بررسی کارکرد' },
 ];
 
