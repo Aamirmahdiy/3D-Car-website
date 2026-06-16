@@ -1,8 +1,15 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import '../styles/header.css';
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { pathname } = useLocation();
+  const onHome = pathname === '/';
+  // On the home page use in-page anchors; elsewhere (e.g. /blog) link back to the
+  // home page with the anchor so the section links still work.
+  const sec = (id) => (onHome ? `#${id}` : `/#${id}`);
+  const close = () => setMenuOpen(false);
 
   return (
     <>
@@ -10,11 +17,11 @@ export default function Header() {
         <div className="nav-inner">
           <nav>
             <a href="#">درباره شرکت</a>
-            <a href="#services">خدمات</a>
-            <a href="#">وبلاگ</a>
-            <a href="#reviews">نظرات</a>
-            <a href="#contact">تماس</a>
-            <a href="#" className="btn-nav">سفارش جستجوی خودرو</a>
+            <a href={sec('services')}>خدمات</a>
+            <Link to="/blog">وبلاگ</Link>
+            <a href={sec('reviews')}>نظرات</a>
+            <a href={sec('contact')}>تماس</a>
+            <a href={sec('order')} className="btn-nav">سفارش جستجوی خودرو</a>
           </nav>
 
           <button className="hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menu">
@@ -24,12 +31,12 @@ export default function Header() {
       </header>
 
       <div className={`mobile-nav${menuOpen ? ' open' : ''}`}>
-        <a href="#" onClick={() => setMenuOpen(false)}>درباره شرکت</a>
-        <a href="#services" onClick={() => setMenuOpen(false)}>خدمات</a>
-        <a href="#" onClick={() => setMenuOpen(false)}>وبلاگ</a>
-        <a href="#reviews" onClick={() => setMenuOpen(false)}>نظرات</a>
-        <a href="#contact" onClick={() => setMenuOpen(false)}>تماس</a>
-        <a href="#" onClick={() => setMenuOpen(false)} style={{ color: 'var(--white)' }}>سفارش جستجوی خودرو</a>
+        <a href="#" onClick={close}>درباره شرکت</a>
+        <a href={sec('services')} onClick={close}>خدمات</a>
+        <Link to="/blog" onClick={close}>وبلاگ</Link>
+        <a href={sec('reviews')} onClick={close}>نظرات</a>
+        <a href={sec('contact')} onClick={close}>تماس</a>
+        <a href={sec('order')} onClick={close} style={{ color: 'var(--white)' }}>سفارش جستجوی خودرو</a>
       </div>
     </>
   );

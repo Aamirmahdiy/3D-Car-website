@@ -1,49 +1,21 @@
-import { lazy, Suspense } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
-import Hero from './components/Hero';
-import CarScene from './components/CarScene';
-import StatsBar from './components/StatsBar';
-import Categories from './components/Categories';
-import Reviews from './components/Reviews';
-import Faq from './components/Faq';
-import CtaBanner from './components/CtaBanner';
-import Contact from './components/Contact';
 import Footer from './components/Footer';
-import DeferUntilNear from './components/DeferUntilNear';
-
-// CarScene (the hero sweep-in) stays eager so the car is the first thing to
-// load. The two below-the-fold 3D scenes load only as they near the viewport,
-// so their WebGL context + Porsche download never compete with the hero.
-const WhySection = lazy(() => import('./components/WhySection'));
-const ReviewsCarScene = lazy(() => import('./components/ReviewsCarScene'));
+import ScrollToTop from './components/ScrollToTop';
+import Home from './pages/Home';
+import Blog from './pages/Blog';
+import BlogArticle from './pages/BlogArticle';
 
 export default function App() {
   return (
     <>
+      <ScrollToTop />
       <Header />
-      <Hero />
-      <CarScene />
-      <StatsBar />
-      <Categories />
-      <DeferUntilNear placeholderClassName="defer-why">
-        <Suspense fallback={<div className="defer-why" />}>
-          <WhySection />
-        </Suspense>
-      </DeferUntilNear>
-      {/* Black gap that hosts WhySection's overflowing features (the امنیت/Security
-          card floats down to bottom: -520px). Sized just tall enough to clear it,
-          so the third car (ReviewsCarScene) sits right below — tune this height to
-          move the third car closer/further. */}
-      <div style={{ background: '#000', height: '540px' }} />
-      <DeferUntilNear placeholderClassName="defer-reviews">
-        <Suspense fallback={<div className="defer-reviews" />}>
-          <ReviewsCarScene />
-        </Suspense>
-      </DeferUntilNear>
-      <Reviews />
-      <Faq />
-      <CtaBanner />
-      <Contact />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/blog" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogArticle />} />
+      </Routes>
       <Footer />
     </>
   );
